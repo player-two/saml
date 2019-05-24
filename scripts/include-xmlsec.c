@@ -1,0 +1,9 @@
+#include <xmlsec/errors.h>
+#include <xmlsec/buffer.h>
+#include <xmlsec/keys.h>
+#include <xmlsec/xmlsec.h>
+#include <xmlsec/xmltree.h>
+#include <xmlsec/xmldsig.h>
+#include <xmlsec/xmlenc.h>
+#include <xmlsec/templates.h>
+#include <xmlsec/crypto.h>

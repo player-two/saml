@@ -1,0 +1,19 @@
+[ req ]
+prompt              = no
+default_bits		    = 2048
+default_md		      = sha512
+default_keyfile 	  = key.pem
+distinguished_name	= req_distinguished_name
+encrypt_key         = no
+x509_extensions     = v3_ca
+
+[ req_distinguished_name ]
+C		=	US
+ST	=	Texas
+O		=	lua-resty-saml
+CN	=	identity-provider
+
+[ v3_ca ]
+subjectKeyIdentifier=hash
+authorityKeyIdentifier=keyid:always,issuer
+basicConstraints = CA:true
