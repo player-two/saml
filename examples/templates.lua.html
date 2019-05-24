@@ -1,0 +1,136 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+<head>
+    <title>lua-resty-saml</title>
+    <link rel="stylesheet" href="../ldoc.css" type="text/css" />
+</head>
+<body>
+
+<div id="container">
+
+<div id="product">
+	<div id="product_logo"></div>
+	<div id="product_name"><big><b></b></big></div>
+	<div id="product_description"></div>
+</div> <!-- id="product" -->
+
+
+<div id="main">
+
+
+<!-- Menu -->
+
+<div id="navigation">
+<br/>
+<h1>ldoc</h1>
+
+<ul>
+  <li><a href="../index.html">Index</a></li>
+</ul>
+
+
+
+<h2>Examples</h2>
+<ul class="nowrap">
+  <li><a href="../examples/identity_provider.lua.html">identity_provider.lua</a></li>
+  <li><a href="../examples/service_provider.lua.html">service_provider.lua</a></li>
+  <li><strong>templates.lua</strong></li>
+</ul>
+<h2>Modules</h2>
+<ul class="nowrap">
+  <li><a href="../modules/resty.saml.binding.html">resty.saml.binding</a></li>
+  <li><a href="../modules/resty.saml.constants.html">resty.saml.constants</a></li>
+  <li><a href="../modules/resty.saml.sig.html">resty.saml.sig</a></li>
+  <li><a href="../modules/resty.saml.xml.html">resty.saml.xml</a></li>
+</ul>
+<h2>Topics</h2>
+<ul class="">
+  <li><a href="../topics/00-Introduction.md.html">00-Introduction</a></li>
+</ul>
+
+</div>
+
+<div id="content">
+
+    <h2>templates.lua</h2>
+<pre>
+<span class="keyword">local</span> _M = {}
+
+<span class="keyword">local</span> <span class="keyword">function</span> interp(s, tab)
+  <span class="keyword">return</span> s:gsub(<span class="string">'($%b{})'</span>, <span class="keyword">function</span>(w)
+    <span class="keyword">local</span> key = w:sub(<span class="number">3</span>, -<span class="number">2</span>)
+    <span class="keyword">if</span> <span class="keyword">not</span> key:find(<span class="string">"."</span>, <span class="number">2</span>, <span class="keyword">true</span>) <span class="keyword">then</span>
+      <span class="keyword">return</span> tab[key] <span class="keyword">or</span> <span class="string">""</span>
+    <span class="keyword">else</span>
+      <span class="keyword">local</span> t = tab
+      <span class="keyword">for</span> k <span class="keyword">in</span> key:gmatch(<span class="string">"%a+"</span>) <span class="keyword">do</span>
+        t = t[k]
+        <span class="keyword">if</span> <span class="keyword">not</span> t <span class="keyword">then</span> <span class="keyword">return</span> <span class="string">""</span> <span class="keyword">end</span>
+      <span class="keyword">end</span>
+      <span class="keyword">return</span> t
+    <span class="keyword">end</span>
+  <span class="keyword">end</span>)
+<span class="keyword">end</span>
+
+<span class="keyword">local</span> _AUTHN_REQUEST = <span class="string">[[
+&lt;?xml version="1.0" ?&gt;
+&lt;samlp:AuthnRequest xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion" xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol" Version="2.0" ID="${uuid}" IssueInstant="${datetime}" Destination="${destination}" ProtocolBinding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" AssertionConsumerServiceURL="${acs_url}" ProviderName="${name}"&gt;
+  &lt;saml:Issuer Format="urn:oasis:names:tc:SAML:2.0:nameid-format:entity"&gt;${issuer}&lt;/saml:Issuer&gt;
+  &lt;samlp:NameIDPolicy Format="urn:oasis:names:tc:SAML:2.0:nameid-format:transient" AllowCreate="true"/&gt;
+&lt;/samlp:AuthnRequest&gt;
+]]</span>
+
+<span class="keyword">function</span> _M.authn_request(params)
+  <span class="keyword">return</span> interp(_AUTHN_REQUEST, params)
+<span class="keyword">end</span>
+
+
+<span class="keyword">local</span> _RESPONSE = <span class="string">[[
+&lt;samlp:Response xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol" xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion" ID="_8e8dc5f69a98cc4c1ff3427e5ce34606fd672f91e6" Version="2.0" IssueInstant="2014-07-17T01:01:48Z" Destination="${destination}" InResponseTo="ONELOGIN_4fee3b046395c4e751011e97f8900b5273d56685"&gt;
+  &lt;saml:Issuer&gt;${issuer}&lt;/saml:Issuer&gt;
+  &lt;samlp:Status&gt;
+    &lt;samlp:StatusCode Value="urn:oasis:names:tc:SAML:2.0:status:Success"/&gt;
+  &lt;/samlp:Status&gt;
+&lt;/samlp:Response&gt;
+]]</span>
+
+<span class="keyword">function</span> _M.response(params)
+  <span class="keyword">return</span> interp(_RESPONSE, params)
+<span class="keyword">end</span>
+
+<span class="keyword">local</span> _METADATA = <span class="string">[[
+&lt;?xml version="1.0" ?&gt;
+&lt;saml:EntityDescriptor entityID="${entity_id}" xmlns:saml="urn:oasis:names:tc:SAML:2.0:metadata" xmlns:dsig="http://www.w3.org/2000/09/xmldsig#"&gt;
+  &lt;saml:SPSSODescriptor AuthnRequestsSigned="true" WantAssertionsSigned="true" protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol"&gt;
+    &lt;saml:KeyDescriptor use="signing"&gt;
+      &lt;dsig:KeyInfo&gt;
+        &lt;dsig:X509Data&gt;
+          &lt;dsig:X509Certificate&gt;${cert}&lt;/dsig:X509Certificate&gt;
+        &lt;/dsig:X509Data&gt;
+      &lt;/dsig:KeyInfo&gt;
+    &lt;/saml:KeyDescriptor&gt;
+    &lt;saml:SingleSignOnService Binding="${sso.binding}" Location="${entity_id}${sso.location}"/&gt;
+    &lt;saml:AssertionConsumerService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" Location="${entity_id}${acs.location}"/&gt;
+    &lt;saml:SingleLogoutService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" Location="${entity_id}${sls.location}"/&gt;
+  &lt;/saml:SPSSODescriptor&gt;
+&lt;/saml:EntityDescriptor&gt;
+]]</span>
+
+<span class="keyword">function</span> _M.metadata(metadata)
+  <span class="keyword">return</span> interp(_METADATA, metadata)
+<span class="keyword">end</span>
+
+<span class="keyword">return</span> _M</pre>
+
+
+</div> <!-- id="content" -->
+</div> <!-- id="main" -->
+<div id="about">
+<i>generated by <a href="http://github.com/stevedonovan/LDoc">LDoc 1.4.6</a></i>
+<i style="float:right;">Last updated 2019-05-24 19:16:13 </i>
+</div> <!-- id="about" -->
+</div> <!-- id="container" -->
+</body>
+</html>

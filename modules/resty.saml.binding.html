@@ -1,0 +1,314 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+<head>
+    <title>lua-resty-saml</title>
+    <link rel="stylesheet" href="../ldoc.css" type="text/css" />
+</head>
+<body>
+
+<div id="container">
+
+<div id="product">
+	<div id="product_logo"></div>
+	<div id="product_name"><big><b></b></big></div>
+	<div id="product_description"></div>
+</div> <!-- id="product" -->
+
+
+<div id="main">
+
+
+<!-- Menu -->
+
+<div id="navigation">
+<br/>
+<h1>ldoc</h1>
+
+<ul>
+  <li><a href="../index.html">Index</a></li>
+</ul>
+
+<h2>Contents</h2>
+<ul>
+<li><a href="#Functions">Functions</a></li>
+</ul>
+
+
+<h2>Modules</h2>
+<ul class="nowrap">
+  <li><strong>resty.saml.binding</strong></li>
+  <li><a href="../modules/resty.saml.constants.html">resty.saml.constants</a></li>
+  <li><a href="../modules/resty.saml.sig.html">resty.saml.sig</a></li>
+  <li><a href="../modules/resty.saml.xml.html">resty.saml.xml</a></li>
+</ul>
+<h2>Topics</h2>
+<ul class="">
+  <li><a href="../topics/00-Introduction.md.html">00-Introduction</a></li>
+</ul>
+<h2>Examples</h2>
+<ul class="nowrap">
+  <li><a href="../examples/identity_provider.lua.html">identity_provider.lua</a></li>
+  <li><a href="../examples/service_provider.lua.html">service_provider.lua</a></li>
+  <li><a href="../examples/templates.lua.html">templates.lua</a></li>
+</ul>
+
+</div>
+
+<div id="content">
+
+<h1>Module <code>resty.saml.binding</code></h1>
+<p>Functions for creating or parsing SAML bindings</p>
+<p>
+
+</p>
+
+
+<h2><a href="#Functions">Functions</a></h2>
+<table class="function_list">
+	<tr>
+	<td class="name" nowrap><a href="#create_redirect">create_redirect (key, sig_alg, req, relay_state)</a></td>
+	<td class="summary">Create a redirect binding</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#parse_redirect">parse_redirect (sig_alg, deflated_encoded, relay_state, signature, cert_from_doc)</a></td>
+	<td class="summary">Parse a redirect binding</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#create_post">create_post (key, sig_alg, destination, params)</a></td>
+	<td class="summary">Create a post binding</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#parse_post">parse_post (encoded, cert_from_doc)</a></td>
+	<td class="summary">Parse a post binding</td>
+	</tr>
+</table>
+
+<br/>
+<br/>
+
+
+    <h2 class="section-header "><a name="Functions"></a>Functions</h2>
+
+    <dl class="function">
+    <dt>
+    <a name = "create_redirect"></a>
+    <strong>create_redirect (key, sig_alg, req, relay_state)</strong>
+    </dt>
+    <dd>
+    Create a redirect binding
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">key</span>
+            <span class="types"><span class="type">xmlSecKeyPtr</span></span>
+
+
+
+        </li>
+        <li><span class="parameter">sig_alg</span>
+            <span class="types"><a class="type" href="https://www.lua.org/manual/5.1/manual.html#5.4">string</a></span>
+
+
+
+        </li>
+        <li><span class="parameter">req</span>
+            <span class="types"><a class="type" href="https://www.lua.org/manual/5.1/manual.html#5.4">string</a></span>
+
+
+
+        </li>
+        <li><span class="parameter">relay_state</span>
+            <span class="types"><a class="type" href="https://www.lua.org/manual/5.1/manual.html#5.4">string</a></span>
+
+
+
+        </li>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+        <li>
+           <span class="types">optional <a class="type" href="https://www.lua.org/manual/5.1/manual.html#5.4">string</a></span>
+        signature</li>
+        <li>
+           <span class="types">optional <a class="type" href="https://www.lua.org/manual/5.1/manual.html#5.4">string</a></span>
+        error</li>
+    </ol>
+
+
+    <h3>See also:</h3>
+    <ul>
+         <li><a href="../modules/resty.saml.sig.html#sign_binary">sig.sign_binary</a></li>
+         <li><a href="../modules/resty.saml.constants.html#SIGNATURE_ALGORITHMS">constants:SIGNATURE_ALGORITHMS</a></li>
+    </ul>
+
+
+</dd>
+    <dt>
+    <a name = "parse_redirect"></a>
+    <strong>parse_redirect (sig_alg, deflated_encoded, relay_state, signature, cert_from_doc)</strong>
+    </dt>
+    <dd>
+    Parse a redirect binding
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">sig_alg</span>
+            <span class="types"><a class="type" href="https://www.lua.org/manual/5.1/manual.html#5.4">string</a></span>
+
+
+
+        </li>
+        <li><span class="parameter">deflated_encoded</span>
+            <span class="types"><a class="type" href="https://www.lua.org/manual/5.1/manual.html#5.4">string</a></span>
+
+
+
+        </li>
+        <li><span class="parameter">relay_state</span>
+            <span class="types"><a class="type" href="https://www.lua.org/manual/5.1/manual.html#5.4">string</a></span>
+
+
+
+        </li>
+        <li><span class="parameter">signature</span>
+            <span class="types"><a class="type" href="https://www.lua.org/manual/5.1/manual.html#5.4">string</a></span>
+
+
+
+        </li>
+        <li><span class="parameter">cert_from_doc</span>
+            <span class="types"><span class="type">func</span></span>
+         determine the signing public key from the document
+        </li>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+        <li>
+           <span class="types">optional <span class="type">xmlDocPtr</span></span>
+        doc</li>
+        <li>
+           <span class="types">optional <a class="type" href="https://www.lua.org/manual/5.1/manual.html#5.4">string</a></span>
+        error</li>
+    </ol>
+
+
+    <h3>See also:</h3>
+    <ul>
+         <li><a href="../modules/resty.saml.sig.html#verify_binary">sig.verify_binary</a></li>
+         <li><a href="../modules/resty.saml.constants.html#SIGNATURE_ALGORITHMS">constants:SIGNATURE_ALGORITHMS</a></li>
+    </ul>
+
+
+</dd>
+    <dt>
+    <a name = "create_post"></a>
+    <strong>create_post (key, sig_alg, destination, params)</strong>
+    </dt>
+    <dd>
+    Create a post binding
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">key</span>
+            <span class="types"><span class="type">xmlSecKeyPtr</span></span>
+
+
+
+        </li>
+        <li><span class="parameter">sig_alg</span>
+            <span class="types"><a class="type" href="https://www.lua.org/manual/5.1/manual.html#5.4">string</a></span>
+
+
+
+        </li>
+        <li><span class="parameter">destination</span>
+            <span class="types"><a class="type" href="https://www.lua.org/manual/5.1/manual.html#5.4">string</a></span>
+
+
+
+        </li>
+        <li><span class="parameter">params</span>
+            <span class="types"><a class="type" href="https://www.lua.org/manual/5.1/manual.html#5.5">table</a></span>
+
+
+
+        </li>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+        <li>
+           <span class="types">optional <a class="type" href="https://www.lua.org/manual/5.1/manual.html#5.4">string</a></span>
+        html</li>
+        <li>
+           <span class="types">optional <a class="type" href="https://www.lua.org/manual/5.1/manual.html#5.4">string</a></span>
+        error</li>
+    </ol>
+
+
+    <h3>See also:</h3>
+    <ul>
+         <a href="../modules/resty.saml.sig.html#sign_xml">sig.sign_xml</a>
+    </ul>
+
+
+</dd>
+    <dt>
+    <a name = "parse_post"></a>
+    <strong>parse_post (encoded, cert_from_doc)</strong>
+    </dt>
+    <dd>
+    Parse a post binding
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">encoded</span>
+            <span class="types"><a class="type" href="https://www.lua.org/manual/5.1/manual.html#5.4">string</a></span>
+
+
+
+        </li>
+        <li><span class="parameter">cert_from_doc</span>
+            <span class="types"><span class="type">func</span></span>
+         determine the signing public key from the document
+        </li>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+        <li>
+           <span class="types">optional <span class="type">xmlDocPtr</span></span>
+        doc</li>
+        <li>
+           <span class="types">optional <a class="type" href="https://www.lua.org/manual/5.1/manual.html#5.4">string</a></span>
+        error</li>
+    </ol>
+
+
+    <h3>See also:</h3>
+    <ul>
+         <a href="../modules/resty.saml.sig.html#verify_doc">sig.verify_doc</a>
+    </ul>
+
+
+</dd>
+</dl>
+
+
+</div> <!-- id="content" -->
+</div> <!-- id="main" -->
+<div id="about">
+<i>generated by <a href="http://github.com/stevedonovan/LDoc">LDoc 1.4.6</a></i>
+<i style="float:right;">Last updated 2019-05-24 19:16:13 </i>
+</div> <!-- id="about" -->
+</div> <!-- id="container" -->
+</body>
+</html>

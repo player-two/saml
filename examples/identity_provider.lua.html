@@ -1,0 +1,182 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+<head>
+    <title>lua-resty-saml</title>
+    <link rel="stylesheet" href="../ldoc.css" type="text/css" />
+</head>
+<body>
+
+<div id="container">
+
+<div id="product">
+	<div id="product_logo"></div>
+	<div id="product_name"><big><b></b></big></div>
+	<div id="product_description"></div>
+</div> <!-- id="product" -->
+
+
+<div id="main">
+
+
+<!-- Menu -->
+
+<div id="navigation">
+<br/>
+<h1>ldoc</h1>
+
+<ul>
+  <li><a href="../index.html">Index</a></li>
+</ul>
+
+
+
+<h2>Examples</h2>
+<ul class="nowrap">
+  <li><strong>identity_provider.lua</strong></li>
+  <li><a href="../examples/service_provider.lua.html">service_provider.lua</a></li>
+  <li><a href="../examples/templates.lua.html">templates.lua</a></li>
+</ul>
+<h2>Modules</h2>
+<ul class="nowrap">
+  <li><a href="../modules/resty.saml.binding.html">resty.saml.binding</a></li>
+  <li><a href="../modules/resty.saml.constants.html">resty.saml.constants</a></li>
+  <li><a href="../modules/resty.saml.sig.html">resty.saml.sig</a></li>
+  <li><a href="../modules/resty.saml.xml.html">resty.saml.xml</a></li>
+</ul>
+<h2>Topics</h2>
+<ul class="">
+  <li><a href="../topics/00-Introduction.md.html">00-Introduction</a></li>
+</ul>
+
+</div>
+
+<div id="content">
+
+    <h2>identity_provider.lua</h2>
+<pre>
+<span class="keyword">local</span> ffi = <span class="global">require</span> <span class="string">"ffi"</span>
+
+<span class="keyword">local</span> binding   = <span class="global">require</span> <span class="string">"resty.saml.binding"</span>
+<span class="keyword">local</span> constants = <span class="global">require</span> <span class="string">"resty.saml.constants"</span>
+<span class="keyword">local</span> sig       = <span class="global">require</span> <span class="string">"resty.saml.sig"</span>
+<span class="keyword">local</span> templates = <span class="global">require</span> <span class="string">"templates"</span>
+<span class="keyword">local</span> xml       = <span class="global">require</span> <span class="string">"resty.saml.xml"</span>
+
+<span class="keyword">local</span> _M = {}
+<span class="keyword">local</span> mt = { __index = _M }
+
+
+<span class="keyword">function</span> _M:new(metadata)
+  <span class="keyword">local</span> idp = {}
+  <span class="keyword">local</span> err = <span class="string">""</span>
+  idp.key = sig.load_key_file(metadata.key_file)
+  idp.cert = sig.load_cert_file(metadata.cert_file)
+  idp.mngr, err = sig.create_keys_manager({ self.cert })
+  <span class="global">assert</span>(idp.mngr, err)
+  idp.metadata = metadata
+  idp.service_providers = {}
+  <span class="keyword">return</span> <span class="global">setmetatable</span>(idp, mt)
+<span class="keyword">end</span>
+
+<span class="keyword">function</span> _M:register_service_provider(sp)
+  sp.mngr, err = sig.create_keys_manager({ sp.cert })
+  <span class="global">assert</span>(sp.mngr, err)
+  self.service_providers[sp.entity_id] = sp
+<span class="keyword">end</span>
+
+<span class="keyword">function</span> _M:metadata_xml()
+  <span class="keyword">local</span> xml = templates.metadata(self.metadata)
+  <span class="keyword">local</span> body, err = sig.sign_xml(self.key, constants.SIGNATURE_ALGORITHMS.RSA_SHA512, xml)
+  <span class="keyword">if</span> err <span class="keyword">then</span>
+    ngx.log(ngx.ERR, err)
+    ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
+  <span class="keyword">end</span>
+
+  ngx.header.content_type = <span class="string">"application/xml"</span>
+  ngx.header.content_length = #body
+  ngx.say(body)
+  ngx.exit(ngx.HTTP_OK)
+<span class="keyword">end</span>
+
+<span class="keyword">function</span> _M:sso(relay_state)
+  <span class="keyword">local</span> args, doc, sp, err
+  <span class="keyword">local</span> <span class="keyword">function</span> cert_from_doc(doc)
+    <span class="keyword">local</span> issuer = xml.issuer(doc)
+    <span class="keyword">if</span> <span class="keyword">not</span> issuer <span class="keyword">then</span> <span class="keyword">return</span> <span class="keyword">nil</span>, <span class="string">"no issuer"</span> <span class="keyword">end</span>
+
+    sp = self.service_providers[issuer]
+    <span class="keyword">if</span> <span class="keyword">not</span> sp <span class="keyword">then</span> <span class="keyword">return</span> <span class="keyword">nil</span>, <span class="string">"service provider for "</span> .. issuer .. <span class="string">" not found"</span> <span class="keyword">end</span>
+    <span class="keyword">return</span> sp.cert, <span class="keyword">nil</span>
+  <span class="keyword">end</span>
+
+  <span class="keyword">if</span> ngx.req.get_method() == <span class="string">"GET"</span> <span class="keyword">then</span>
+    args = ngx.req.get_uri_args()
+    <span class="keyword">if</span> <span class="keyword">not</span> args.SAMLRequest <span class="keyword">then</span> <span class="keyword">return</span> <span class="keyword">nil</span>, <span class="keyword">nil</span>, <span class="string">"No SAMLRequest"</span> <span class="keyword">end</span>
+    <span class="keyword">if</span> <span class="keyword">not</span> args.SigAlg <span class="keyword">then</span> <span class="keyword">return</span> <span class="keyword">nil</span>, <span class="keyword">nil</span>, <span class="string">"No SigAlg"</span> <span class="keyword">end</span>
+    doc, err = binding.parse_redirect(args.SigAlg, args.SAMLRequest, args.RelayState, args.Signature, cert_from_doc)
+  <span class="keyword">elseif</span> ngx.req.get_method() == <span class="string">"POST"</span> <span class="keyword">then</span>
+    ngx.req.read_body()
+    args, err = ngx.req.get_post_args()
+    <span class="keyword">if</span> <span class="keyword">not</span> err <span class="keyword">then</span>
+      doc, err = binding.parse_post(args.SAMLRequest, cert_from_doc)
+    <span class="keyword">end</span>
+  <span class="keyword">else</span>
+    ngx.exit(ngx.HTTP_NOT_ALLOWED)
+  <span class="keyword">end</span>
+
+  xml.free(doc)
+  <span class="keyword">if</span> err <span class="keyword">then</span>
+    ngx.log(ngx.ERR, err)
+    ngx.exit(ngx.HTTP_BAD_REQUEST)
+  <span class="keyword">end</span>
+
+  <span class="keyword">local</span> dest = sp.entity_id .. sp.acs.location
+  <span class="keyword">local</span> relay_state = (args.RelayState <span class="keyword">or</span> <span class="string">""</span>)
+  <span class="keyword">local</span> resp = templates.response({
+    destination = dest,
+    issuer = self.metadata.entity_id,
+  })
+  <span class="keyword">if</span> sp.acs.binding == constants.XMLNS.BINDINGS.HTTP_REDIRECT <span class="keyword">then</span>
+    <span class="keyword">local</span> query_str, err = binding.create_redirect(self.key, constants.SIGNATURE_ALGORITHMS.RSA_SHA512, resp, relay_state)
+    <span class="keyword">if</span> err <span class="keyword">then</span>
+      ngx.log(ngx.ERR, err)
+      ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
+    <span class="keyword">end</span>
+    ngx.status = ngx.HTTP_MOVED_TEMPORARILY
+    ngx.header.cache_control = <span class="string">"no-cache, no-store"</span>
+    ngx.header.pragma = <span class="string">"no-cache"</span>
+    ngx.header.location = dest .. <span class="string">"?"</span> .. query_str
+  <span class="keyword">elseif</span> sp.acs.binding == constants.XMLNS.BINDINGS.HTTP_POST <span class="keyword">then</span>
+    <span class="keyword">local</span> body, err = binding.create_post(self.key, constants.SIGNATURE_ALGORITHMS.RSA_SHA512, dest, {
+      SAMLResponse = resp,
+      RelayState = relay_state
+    })
+    <span class="keyword">if</span> err <span class="keyword">then</span>
+      ngx.log(ngx.ERR, err)
+      ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
+    <span class="keyword">end</span>
+    ngx.header.cache_control = <span class="string">"no-cache, no-store"</span>
+    ngx.header.pragma = <span class="string">"no-cache"</span>
+    ngx.header.content_type = <span class="string">"text/html"</span>
+    ngx.header.content_length = #body
+    ngx.say(body)
+  <span class="keyword">else</span>
+    ngx.log(ngx.ERR, <span class="string">"unknown binding "</span> .. <span class="global">tostring</span>(sp.acs.binding))
+    ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
+  <span class="keyword">end</span>
+<span class="keyword">end</span>
+
+<span class="keyword">return</span> _M</pre>
+
+
+</div> <!-- id="content" -->
+</div> <!-- id="main" -->
+<div id="about">
+<i>generated by <a href="http://github.com/stevedonovan/LDoc">LDoc 1.4.6</a></i>
+<i style="float:right;">Last updated 2019-05-24 19:16:13 </i>
+</div> <!-- id="about" -->
+</div> <!-- id="container" -->
+</body>
+</html>

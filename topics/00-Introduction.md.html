@@ -1,0 +1,137 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+<head>
+    <title>lua-resty-saml</title>
+    <link rel="stylesheet" href="../ldoc.css" type="text/css" />
+</head>
+<body>
+
+<div id="container">
+
+<div id="product">
+	<div id="product_logo"></div>
+	<div id="product_name"><big><b></b></big></div>
+	<div id="product_description"></div>
+</div> <!-- id="product" -->
+
+
+<div id="main">
+
+
+<!-- Menu -->
+
+<div id="navigation">
+<br/>
+<h1>ldoc</h1>
+
+<ul>
+  <li><a href="../index.html">Index</a></li>
+</ul>
+
+
+
+<h2>Topics</h2>
+<ul class="">
+  <li><strong>00-Introduction</strong></li>
+</ul>
+<h2>Modules</h2>
+<ul class="nowrap">
+  <li><a href="../modules/resty.saml.binding.html">resty.saml.binding</a></li>
+  <li><a href="../modules/resty.saml.constants.html">resty.saml.constants</a></li>
+  <li><a href="../modules/resty.saml.sig.html">resty.saml.sig</a></li>
+  <li><a href="../modules/resty.saml.xml.html">resty.saml.xml</a></li>
+</ul>
+<h2>Examples</h2>
+<ul class="nowrap">
+  <li><a href="../examples/identity_provider.lua.html">identity_provider.lua</a></li>
+  <li><a href="../examples/service_provider.lua.html">service_provider.lua</a></li>
+  <li><a href="../examples/templates.lua.html">templates.lua</a></li>
+</ul>
+
+</div>
+
+<div id="content">
+
+
+<h1>Introduction</h1>
+
+<p><a href="https://en.wikipedia.org/wiki/Security_Assertion_Markup_Language">SAML</a> is a protocol for single sign-on.  It defines how two parties, an Identity Provider (IdP) and a Service Provider (SP), can send messages to exchange authenication information.</p>
+
+<p><a href="https://openresty.org/">OpenResty</a> is a web framework for adding custom functionality to <a href="https://nginx.org/">Nginx</a> via <a href="http://www.lua.org/">Lua</a>.</p>
+
+
+<h3>Digital Signatures</h3>
+
+<p>Because this information is sensitive, these parties need to form trust when sending messages over the internet, and the xmlsec spec can ensure the integrity of a message by embedding a cryptographic signature.  This library relies on the implementation of that spec in the <a href="https://www.aleksey.com/xmlsec/">xmlsec</a> C library.</p>
+
+
+<h3>Specifications</h3>
+
+<ul>
+    <li><a href="https://www.w3.org/TR/xmldsig-core/">xmldsig</a></li>
+    <li><a href="https://docs.oasis-open.org/security/saml/v2.0/saml-core-2.0-os.pdf">SAML 2.0 Core</a></li>
+    <li><a href="https://docs.oasis-open.org/security/saml/v2.0/saml-bindings-2.0-os.pdf">SAML 2.0 Bindings</a></li>
+</ul>
+
+
+<h3>Organization</h3>
+
+<p>There are a few different levels to use this library, depending on your preference and need for detail.  In order of lowest to highest-level interfaces:</p>
+
+
+<h5>Internal</h5>
+
+<p>The <code>resty.saml.internal.*</code> modules are the <a href="http://luajit.org/ext_ffi.html">FFI</a> bindings for xmlsec and <a href="http://xmlsoft.org/html/index.html">libxml2</a>.  It is not advised to import them directly, as they are not intended to bind the full API surface of those libraries, rather only what is needed for the higher-level interfaces here.  These modules are purposefully not documented.</p>
+
+
+<h5>Sig</h5>
+
+<p>This module has the lowest-level that you could work at. There are four basic methods here for working with signatures, each of which is a composition of FFI calls to libxml2 and xmlsec.</p>
+
+<pre><code> |         | Document    | Binary        |
+ | ------- | ----------- | ------------- |
+ | Sign    | sign_doc    | sign_binary   |
+ | Verify  | verify_doc  | verify_binary |
+</code></pre>
+
+
+
+<h5>Bindings</h5>
+
+<p>This module builds on top of plain signatures with SAML-specific concepts.  Similarly, there are four main methods:</p>
+
+<pre><code> |           | Create          | Parse           |
+ | --------- | --------------- | --------------- |
+ | Redirect  | create_redirect | parse_redirect  |
+ | Post      | create_post     | parse_post      |
+</code></pre>
+
+
+<p>One notable aspect of the <code>*_parse</code> methods is the <code>cert_from_doc</code> argument.  Between parsing and validating the xml and verifying the signature, you may need to determine which certificate to use based on some content in the document, such as the <code>Issuer</code>.  This is comment when a single IdP communicates with multiple SPs or vice versa.</p>
+
+
+<h5>IdP/SP</h5>
+
+<p>TODO: currently this code is in the examples</p>
+
+
+<h3>Tooling</h3>
+
+<p><a href="https://www.samltool.com/online_tools.php">SAMLTool</a> has a suite of online tools that facilitate getting started with SAML.</p>
+
+<p>The <a href="https://www.aleksey.com/xmlsec/download.html">xmlsec1</a> binary ships with the library.  It can be used to sign and verify documents.</p>
+
+<p>Not only are both tools helpful for working with documents, but they serve as third parties that can validate the functionality of this library.  As such, a few integration tests are written to ensure this tool generates and verifies signatures that independent code can validate.  If this library does not verify a signature from some other library or signs a document that another library claims is invalid, please use them as neutral authorities.</p>
+
+
+</div> <!-- id="content" -->
+</div> <!-- id="main" -->
+<div id="about">
+<i>generated by <a href="http://github.com/stevedonovan/LDoc">LDoc 1.4.6</a></i>
+<i style="float:right;">Last updated 2019-05-24 19:16:13 </i>
+</div> <!-- id="about" -->
+</div> <!-- id="container" -->
+</body>
+</html>
