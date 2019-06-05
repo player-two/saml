@@ -9,6 +9,37 @@ local _M = {}
 
 local _DATA_DIR = "/data/"
 
+local xml_generic_no_error = ffi.cast("xmlGenericErrorFunc", function(ctx, msg, ...) end)
+local xml_structured_no_error = ffi.cast("xmlStructuredErrorFunc", function(ctx, err) end)
+
+
+--[[---
+Initialize the libxml2 parser
+@tparam[opt={}] table options
+@usage local err = sig.init({ debug = true })
+]]
+function _M.init(options)
+  options = options or {
+    debug = false,
+  }
+
+  xml.xmlInitParser()
+
+  if not options.debug then
+    -- silences stderr
+    xml.xmlSetGenericErrorFunc(nil, xml_generic_no_error)
+    xml.xmlSetStructuredErrorFunc(nil, xml_structured_no_error)
+  end
+end
+
+--[[---
+Cleanup memory allocated by the libxml2 parser
+]]
+function _M.cleanup()
+  xmlCleanupParser()
+end
+
+
 --[[---
 Parse xml text into a libxml2 document
 @tparam string str

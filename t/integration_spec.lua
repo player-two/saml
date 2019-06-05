@@ -11,7 +11,12 @@ describe("saml integration", function()
     sig       = require "resty.saml.sig"
     xml       = require "resty.saml.xml"
 
-    sig.init()
+    xml.init()
+    local err = sig.init()
+    if err then
+      print(err)
+      assert(nil)
+    end
 
     key_text = assert(utils.readfile("/t/data/idp.key"))
     cert_text = assert(utils.readfile("/t/data/idp.crt"))

@@ -14,6 +14,7 @@ describe("sig", function()
     sig       = require "resty.saml.sig"
     xml       = require "resty.saml.xml"
 
+    xml.init()
     local err = sig.init()
     if err then
       print(err)

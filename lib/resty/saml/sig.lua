@@ -11,9 +11,6 @@ local xs        = require "resty.saml.internal.xmlsec"
 local _M = {}
 local initialized = false
 
-local xml_generic_no_error = ffi.cast("xmlGenericErrorFunc", function(ctx, msg, ...) end)
-local xml_structured_no_error = ffi.cast("xmlStructuredErrorFunc", function(ctx, err) end)
-
 
 --[[---
 Initialize the libxml2 parser and xmlsec
@@ -23,12 +20,13 @@ Initialize the libxml2 parser and xmlsec
 ]]
 function _M.init(options)
   -- https://www.aleksey.com/xmlsec/api/xmlsec-notes-init-shutdown.html
-  options = options or {
-    debug = false,
-    crypto_lib = "openssl",
-  }
-
-  xml.xmlInitParser()
+  options = options or {}
+  if options.debug == nil then
+    options.debug = false
+  end
+  if options.crypto_lib == nil then
+    options.crypto_lib = "openssl"
+  end
 
   if xs.xmlSecInit() < 0 then
     return "xmlsec initialization failed"
@@ -49,8 +47,6 @@ function _M.init(options)
 
   if not options.debug then
     -- silences stderr
-    xml.xmlSetGenericErrorFunc(nil, xml_generic_no_error)
-    xml.xmlSetStructuredErrorFunc(nil, xml_structured_no_error)
     xs.xmlSecErrorsSetCallback(nil)
   end
 
