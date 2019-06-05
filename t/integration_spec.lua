@@ -11,7 +11,7 @@ describe("saml integration", function()
     sig       = require "resty.saml.sig"
     xml       = require "resty.saml.xml"
 
-    xml.init()
+    xml.init({ rock_dir = "/" })
     local err = sig.init()
     if err then
       print(err)

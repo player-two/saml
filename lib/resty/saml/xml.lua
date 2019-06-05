@@ -7,7 +7,8 @@ local xml = require "resty.saml.internal.xml"
 
 local _M = {}
 
-local _DATA_DIR = "/data/"
+local _DATA_DIR
+local _XSD_MAIN = "xsd/saml-schema-protocol-2.0.xsd"
 
 local xml_generic_no_error = ffi.cast("xmlGenericErrorFunc", function(ctx, msg, ...) end)
 local xml_structured_no_error = ffi.cast("xmlStructuredErrorFunc", function(ctx, err) end)
@@ -19,9 +20,11 @@ Initialize the libxml2 parser
 @usage local err = sig.init({ debug = true })
 ]]
 function _M.init(options)
-  options = options or {
-    debug = false,
-  }
+  options = options or {}
+  if options.debug == nil then
+    options.debug = false
+  end
+  _DATA_DIR = assert(options.rock_dir, "xml.init() options must include rock_dir") .. "data/"
 
   xml.xmlInitParser()
 
@@ -86,7 +89,7 @@ Determine if the libxml2 document is valid according to the SAML XSD
 @treturn ?string error
 ]]
 function _M.validate_doc(doc)
-  local parser_ctx = xml.xmlSchemaNewParserCtxt(_DATA_DIR .. "xsd/saml-schema-protocol-2.0.xsd")
+  local parser_ctx = xml.xmlSchemaNewParserCtxt(_DATA_DIR .. _XSD_MAIN)
   if parser_ctx == nil then
     return "could not create XSD schema parsing context"
   end
@@ -106,6 +109,9 @@ function _M.validate_doc(doc)
     return "document does not validate against XSD schema"
   end
   return nil
+end
+
+function _M.session_index(doc)
 end
 
 --[[---

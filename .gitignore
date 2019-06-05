@@ -1,1 +1,5 @@
 out
+.luarocks
+luarocks
+lua
+lua_modules
