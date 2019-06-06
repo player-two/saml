@@ -68,11 +68,11 @@
 <h2><a href="#Functions">Functions</a></h2>
 <table class="function_list">
 	<tr>
-	<td class="name" nowrap><a href="#create_redirect">create_redirect (key, sig_alg, req, relay_state)</a></td>
+	<td class="name" nowrap><a href="#create_redirect">create_redirect (key, params)</a></td>
 	<td class="summary">Create a redirect binding</td>
 	</tr>
 	<tr>
-	<td class="name" nowrap><a href="#parse_redirect">parse_redirect (sig_alg, deflated_encoded, relay_state, signature, cert_from_doc)</a></td>
+	<td class="name" nowrap><a href="#parse_redirect">parse_redirect (saml_type, cert_from_doc)</a></td>
 	<td class="summary">Parse a redirect binding</td>
 	</tr>
 	<tr>
@@ -80,7 +80,7 @@
 	<td class="summary">Create a post binding</td>
 	</tr>
 	<tr>
-	<td class="name" nowrap><a href="#parse_post">parse_post (encoded, cert_from_doc)</a></td>
+	<td class="name" nowrap><a href="#parse_post">parse_post (saml_type, cert_from_doc)</a></td>
 	<td class="summary">Parse a post binding</td>
 	</tr>
 </table>
@@ -94,7 +94,7 @@
     <dl class="function">
     <dt>
     <a name = "create_redirect"></a>
-    <strong>create_redirect (key, sig_alg, req, relay_state)</strong>
+    <strong>create_redirect (key, params)</strong>
     </dt>
     <dd>
     Create a redirect binding
@@ -108,20 +108,8 @@
 
 
         </li>
-        <li><span class="parameter">sig_alg</span>
-            <span class="types"><a class="type" href="https://www.lua.org/manual/5.1/manual.html#5.4">string</a></span>
-
-
-
-        </li>
-        <li><span class="parameter">req</span>
-            <span class="types"><a class="type" href="https://www.lua.org/manual/5.1/manual.html#5.4">string</a></span>
-
-
-
-        </li>
-        <li><span class="parameter">relay_state</span>
-            <span class="types"><a class="type" href="https://www.lua.org/manual/5.1/manual.html#5.4">string</a></span>
+        <li><span class="parameter">params</span>
+            <span class="types"><a class="type" href="https://www.lua.org/manual/5.1/manual.html#5.5">table</a></span>
 
 
 
@@ -149,7 +137,7 @@
 </dd>
     <dt>
     <a name = "parse_redirect"></a>
-    <strong>parse_redirect (sig_alg, deflated_encoded, relay_state, signature, cert_from_doc)</strong>
+    <strong>parse_redirect (saml_type, cert_from_doc)</strong>
     </dt>
     <dd>
     Parse a redirect binding
@@ -157,29 +145,9 @@
 
     <h3>Parameters:</h3>
     <ul>
-        <li><span class="parameter">sig_alg</span>
+        <li><span class="parameter">saml_type</span>
             <span class="types"><a class="type" href="https://www.lua.org/manual/5.1/manual.html#5.4">string</a></span>
-
-
-
-        </li>
-        <li><span class="parameter">deflated_encoded</span>
-            <span class="types"><a class="type" href="https://www.lua.org/manual/5.1/manual.html#5.4">string</a></span>
-
-
-
-        </li>
-        <li><span class="parameter">relay_state</span>
-            <span class="types"><a class="type" href="https://www.lua.org/manual/5.1/manual.html#5.4">string</a></span>
-
-
-
-        </li>
-        <li><span class="parameter">signature</span>
-            <span class="types"><a class="type" href="https://www.lua.org/manual/5.1/manual.html#5.4">string</a></span>
-
-
-
+         either SAMLRequest or SAMLResponse
         </li>
         <li><span class="parameter">cert_from_doc</span>
             <span class="types"><span class="type">func</span></span>
@@ -193,6 +161,9 @@
            <span class="types">optional <span class="type">xmlDocPtr</span></span>
         doc</li>
         <li>
+           <span class="types">optional <a class="type" href="https://www.lua.org/manual/5.1/manual.html#5.5">table</a></span>
+        attrs</li>
+        <li>
            <span class="types">optional <a class="type" href="https://www.lua.org/manual/5.1/manual.html#5.4">string</a></span>
         error</li>
     </ol>
@@ -200,8 +171,7 @@
 
     <h3>See also:</h3>
     <ul>
-         <li><a href="../modules/resty.saml.sig.html#verify_binary">sig.verify_binary</a></li>
-         <li><a href="../modules/resty.saml.constants.html#SIGNATURE_ALGORITHMS">constants:SIGNATURE_ALGORITHMS</a></li>
+         <a href="../modules/resty.saml.sig.html#verify_binary">sig.verify_binary</a>
     </ul>
 
 
@@ -262,7 +232,7 @@
 </dd>
     <dt>
     <a name = "parse_post"></a>
-    <strong>parse_post (encoded, cert_from_doc)</strong>
+    <strong>parse_post (saml_type, cert_from_doc)</strong>
     </dt>
     <dd>
     Parse a post binding
@@ -270,11 +240,9 @@
 
     <h3>Parameters:</h3>
     <ul>
-        <li><span class="parameter">encoded</span>
+        <li><span class="parameter">saml_type</span>
             <span class="types"><a class="type" href="https://www.lua.org/manual/5.1/manual.html#5.4">string</a></span>
-
-
-
+         either SAMLRequest or SAMLResponse
         </li>
         <li><span class="parameter">cert_from_doc</span>
             <span class="types"><span class="type">func</span></span>
@@ -287,6 +255,9 @@
         <li>
            <span class="types">optional <span class="type">xmlDocPtr</span></span>
         doc</li>
+        <li>
+           <span class="types"><a class="type" href="https://www.lua.org/manual/5.1/manual.html#5.5">table</a></span>
+        args</li>
         <li>
            <span class="types">optional <a class="type" href="https://www.lua.org/manual/5.1/manual.html#5.4">string</a></span>
         error</li>
@@ -307,7 +278,7 @@
 </div> <!-- id="main" -->
 <div id="about">
 <i>generated by <a href="http://github.com/stevedonovan/LDoc">LDoc 1.4.6</a></i>
-<i style="float:right;">Last updated 2019-05-24 19:16:13 </i>
+<i style="float:right;">Last updated 2019-06-06 15:39:46 </i>
 </div> <!-- id="about" -->
 </div> <!-- id="container" -->
 </body>
