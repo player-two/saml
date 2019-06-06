@@ -68,7 +68,7 @@ function _M:sso(relay_state)
     ngx.exit(ngx.HTTP_NOT_ALLOWED)
   end
 
-  xml.free(doc)
+  xml.free_doc(doc)
   if err then
     ngx.log(ngx.ERR, err)
     ngx.exit(ngx.HTTP_BAD_REQUEST)

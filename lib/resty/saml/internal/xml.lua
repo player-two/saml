@@ -100,8 +100,49 @@ typedef unsigned char xmlChar;
 int xmlStrEqual(const char*, const char*);
 
 // libxml/xpath.h
-struct _xmlNodeSet;
+struct _xmlNodeSet {
+    int nodeNr; // number of nodes in the set
+    int nodeMax; // size of the array as allocated
+    xmlNodePtr* nodeTab; // array of nodes in no particular order @
+};
 typedef struct _xmlNodeSet *xmlNodeSetPtr;
+struct _xmlXPathCompExpr;
+typedef struct _xmlXPathCompExpr *xmlXPathCompExprPtr;
+struct _xmlXPathContext;
+typedef struct _xmlXPathContext *xmlXPathContextPtr;
+typedef enum {
+  XPATH_UNDEFINED = 0,
+  XPATH_NODESET = 1,
+  XPATH_BOOLEAN = 2,
+  XPATH_NUMBER = 3,
+  XPATH_STRING = 4,
+  XPATH_POINT = 5,
+  XPATH_RANGE = 6,
+  XPATH_LOCATIONSET = 7,
+  XPATH_USERS = 8,
+  XPATH_XSLT_TREE = 9
+} xmlXPathObjectType;
+struct _xmlXPathObject {
+  xmlXPathObjectType type;
+  xmlNodeSetPtr nodesetval;
+  int boolval;
+  double floatval;
+  xmlChar* stringval;
+  void* user;
+  int index;
+  void* user2;
+  int index2;
+};
+typedef struct _xmlXPathObject *xmlXPathObjectPtr;
+xmlXPathContextPtr xmlXPathNewContext(xmlDocPtr doc);
+xmlXPathCompExprPtr xmlXPathCompile(const xmlChar * str);
+xmlXPathObjectPtr xmlXPathCompiledEval(xmlXPathCompExprPtr comp, xmlXPathContextPtr ctx);
+void xmlXPathFreeCompExpr(xmlXPathCompExprPtr comp);
+void xmlXPathFreeContext(xmlXPathContextPtr ctxt);
+void xmlXPathFreeObject(xmlXPathObjectPtr obj);
+
+// libxml/xpathInternals.h
+int xmlXPathRegisterNs(xmlXPathContextPtr ctxt, const xmlChar * prefix, const xmlChar * ns_uri);
 
 // libxml/xmlschemas.h
 struct _xmlSchema;

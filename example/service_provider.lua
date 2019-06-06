@@ -110,13 +110,13 @@ function _M:acs()
 
   local valid, err = sig.verify_doc(self.idp_mngr, doc)
   if err then
-    xml.free(doc)
+    xml.free_doc(doc)
     ngx.log(ngx.ERR, err)
     ngx.exit(ngx.HTTP_BAD_REQUEST)
   end
 
   if not valid then
-    xml.free(doc)
+    xml.free_doc(doc)
     ngx.log(ngx.WARN, "invalid signature")
     ngx.exit(ngx.HTTP_BAD_REQUEST)
   end

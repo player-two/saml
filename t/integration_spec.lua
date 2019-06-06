@@ -33,7 +33,7 @@ describe("saml integration", function()
 
     after_each(function()
       if doc ~= nil then
-        xml.free(doc)
+        xml.free_doc(doc)
       end
     end)
 
