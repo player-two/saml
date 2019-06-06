@@ -75,63 +75,88 @@ end
 --[[---
 Create a redirect binding
 @tparam xmlSecKeyPtr key
-@tparam string sig_alg
-@tparam string req
-@tparam string relay_state
+@tparam table params
 @treturn ?string signature
 @treturn ?string error
 @see sig.sign_binary
 @see constants:SIGNATURE_ALGORITHMS
 ]]
-function _M.create_redirect(key, sig_alg, req, relay_state)
-  local deflated, _, _, _ = zlib.deflate()(ngx.encode_base64(req), "finish")
-  local encoded = ngx.encode_base64(assert(deflated))
+function _M.create_redirect(key, params)
+  local saml_type
+  if params.SAMLRequest then
+    saml_type = "SAMLRequest"
+  elseif params.SAMLResponse then
+    saml_type = "SAMLResponse"
+  end
+  assert(saml_type, "no saml request or response")
 
-  local query_string = string.format("SAMLRequest=%s&RelayState=%s&SigAlg=%s",
-    encode_uri(encoded),
-    encode_uri(relay_state),
-    encode_uri(ffi.string(assert(sig_alg)))
-  )
-  local signature, err = sig.sign_binary(key, sig_alg, query_string)
+  local encoded = ngx.encode_base64(params[saml_type])
+  if not encoded then return nil, saml_type .. " cannot be base64 encoded" end
+  local ok, deflated = pcall(zlib.deflate(), encoded, "finish")
+  if not ok then return nil, saml_type .. " cannot be compressed" end
+  local deflated_encoded = ngx.encode_base64(deflated)
+  if not deflated_encoded then return nil, "decompressed " .. saml_type .. " cannot be base64 encoded" end
+
+  local query_string = saml_type .. "=" .. encode_uri(deflated_encoded)
+  if params.RelayState then
+    query_string = query_string .. "&RelayState=" .. encode_uri(params.RelayState)
+  end
+  query_string = query_string .. "&SigAlg=" .. encode_uri(params.SigAlg)
+
+  local signature, err = sig.sign_binary(key, params.SigAlg, query_string)
   if err then return nil, err end
   return query_string .. "&Signature=" .. encode_uri(ngx.encode_base64(signature)), nil
 end
 
 --[[---
 Parse a redirect binding
-@tparam string sig_alg
-@tparam string deflated_encoded
-@tparam string relay_state
-@tparam string signature
+@tparam string saml_type either SAMLRequest or SAMLResponse
 @tparam func cert_from_doc determine the signing public key from the document
 @treturn ?xmlDocPtr doc
+@treturn ?table attrs
 @treturn ?string error
 @see sig.verify_binary
-@see constants:SIGNATURE_ALGORITHMS
 ]]
-function _M.parse_redirect(sig_alg, deflated_encoded, relay_state, signature, cert_from_doc)
-  local inflated, _, _, _ = zlib.inflate()(ngx.decode_base64(deflated_encoded))
-  local req = ngx.decode_base64(assert(inflated))
-  local doc = xml.parse(req)
-  if doc == nil then return nil, "unable to read xml" end
+function _M.parse_redirect(saml_type, cert_from_doc)
+  if ngx.req.get_method() ~= "GET" then return nil, nil, "method not allowed" end
+
+  local args = ngx.req.get_uri_args()
+  local encoded_inflated = args[saml_type]
+  if not encoded_inflated then return nil, args, "no " .. saml_type end
+
+  if not args.SigAlg then return nil, args, "no SigAlg" end
+  if not args.Signature then return nil, args, "no Signature" end
+  local signature = ngx.decode_base64(args.Signature)
+  if not signature then return nil, args, "signature is not valid base64" end
+
+  local deflated = ngx.decode_base64(encoded_inflated)
+  if not deflated then return nil, args, saml_type .. " is not valid base64" end
+  local ok, encoded = pcall(zlib.inflate(), deflated)
+  if not ok then return nil, args, saml_type .. " is not valid compresssion format" end
+
+  local xml_str = ngx.decode_base64(encoded)
+  if not xml_str then return nil, args, "decompressed " .. saml_type .. " is not valid base64" end
+
+  local doc = xml.parse(xml_str)
+  if doc == nil then return nil, args, saml_type .. " is not valid xml" end
 
   local err = xml.validate_doc(doc)
-  if err then return doc, err end
+  if err then return doc, args, err end
 
   local cert = cert_from_doc(doc)
-  if not cert then return doc, "no cert" end
+  if not cert then return doc, args, "no cert" end
 
-  local sig_input = string.format("SAMLRequest=%s&RelayState=%s&SigAlg=%s",
-    ngx.escape_uri(deflated_encoded),
-    ngx.escape_uri(relay_state),
-    ngx.escape_uri(sig_alg)
-  )
+  local sig_input = saml_type .. "=" .. ngx.escape_uri(encoded_inflated)
+  if args.RelayState then
+    sig_input = sig_input .. "&RelayState=" .. ngx.escape_uri(args.RelayState)
+  end
+  sig_input = sig_input .. "&SigAlg=" .. ngx.escape_uri(args.SigAlg)
 
-  local valid, err = sig.verify_binary(cert, sig_alg, sig_input, ngx.decode_base64(signature))
-  if err then return doc, err end
-  if not valid then return doc, "invalid signature" end
+  local valid, err = sig.verify_binary(cert, args.SigAlg, sig_input, signature)
+  if err then return doc, args, err end
+  if not valid then return doc, args, "invalid signature" end
 
-  return doc, nil
+  return doc, args, nil
 end
 
 --[[---
@@ -163,31 +188,43 @@ end
 
 --[[---
 Parse a post binding
-@tparam string encoded
+@tparam string saml_type either SAMLRequest or SAMLResponse
 @tparam func cert_from_doc determine the signing public key from the document
 @treturn ?xmlDocPtr doc
+@treturn table args
 @treturn ?string error
 @see sig.verify_doc
 ]]
-function _M.parse_post(encoded, cert_from_doc)
-  local req = ngx.decode_base64(encoded)
-  local doc = xml.parse(req)
-  if doc == nil then return nil, "unable to read xml" end
+function _M.parse_post(saml_type, cert_from_doc)
+  if ngx.req.get_method() ~= "POST" then return nil, nil, "method not allowed" end
+
+  ngx.req.read_body()
+  local args, err = ngx.req.get_post_args()
+  if not args then return nil, nil, err end
+
+  local encoded = args[saml_type]
+  if not encoded then return nil, args, "no " .. saml_type end
+
+  local content = ngx.decode_base64(encoded)
+  if not content then return nil, args, saml_type .. " is not valid base64" end
+
+  local doc = xml.parse(content)
+  if doc == nil then return nil, args, saml_type .. " is not valid xml" end
 
   local err = xml.validate_doc(doc)
-  if err then return doc, err end
+  if err then return doc, args, err end
 
   local cert = cert_from_doc(doc)
-  if not cert then return doc, "no cert" end
+  if not cert then return doc, args, "no cert" end
 
   local mngr, err = sig.create_keys_manager({ cert })
-  if err then return doc, err end
+  if err then return doc, args, err end
 
   local valid, err = sig.verify_doc(mngr, doc)
-  if err then return doc, err end
-  if not valid then return doc, "invalid signature" end
+  if err then return doc, args, err end
+  if not valid then return doc, args, "invalid signature" end
 
-  return doc, nil
+  return doc, args, nil
 end
 
 return _M
