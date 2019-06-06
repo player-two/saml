@@ -23,6 +23,7 @@ external_dependencies = {
 build = {
   type = "builtin",
   modules = {
+    ["resty.saml.init"] = "lib/resty/saml/init.lua",
     ["resty.saml.binding"] = "lib/resty/saml/binding.lua",
     ["resty.saml.constants"] = "lib/resty/saml/constants.lua",
     ["resty.saml.internal.xml"] = "lib/resty/saml/internal/xml.lua",
