@@ -2,7 +2,6 @@
 Functions for creating or parsing SAML bindings
 ]]
 
-local ffi = require "ffi"
 local zlib = require "zlib"
 
 local constants = require "resty.saml.constants"

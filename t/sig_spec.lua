@@ -2,7 +2,7 @@ local mime  = require "mime"
 local utils = require "utils"
 
 describe("sig", function()
-  local constants, sig, xml
+  local constants, saml
   local key, cert
 
   local binary_data = "agBv0s1vhMpOxGbsoj1lMPCoYyUOAivpBxZlTyozJcgSmLwCWp1uijM2UTHo"
@@ -11,38 +11,36 @@ describe("sig", function()
 
   setup(function()
     constants = require "resty.saml.constants"
-    sig       = require "resty.saml.sig"
-    xml       = require "resty.saml.xml"
+    saml      = require "saml"
 
-    xml.init({ rock_dir = "/" })
-    local err = sig.init()
+    local err = saml.init({ rock_dir = "/" })
     if err then
       print(err)
       assert(nil)
     end
 
-    key = assert(sig.load_key_file("/t/data/sp.key"))
-    assert(sig.key_load_cert_file(key, "/t/data/sp.crt"))
-    cert = assert(sig.load_cert_file("/t/data/sp.crt"))
+    key = assert(saml.load_key_file("/t/data/sp.key"))
+    assert(saml.key_load_cert_file(key, "/t/data/sp.crt"))
+    cert = assert(saml.load_cert_file("/t/data/sp.crt"))
   end)
 
 
   describe(".sign_binary()", function()
 
     it("errors for invalid algorithm", function()
-      local result, err = sig.sign_binary(key, "sha-rsa256", binary_data)
+      local result, err = saml.sign_binary(key, "sha-rsa256", binary_data)
       assert.are.equal(err, "transform not found")
       assert.is_nil(result)
     end)
 
     it("generates correct bytes using rsa-sha256", function()
-      local result, err = sig.sign_binary(key, constants.SIGNATURE_ALGORITHMS.RSA_SHA256, binary_data)
+      local result, err = saml.sign_binary(key, constants.SIGNATURE_ALGORITHMS.RSA_SHA256, binary_data)
       assert.is_nil(err)
       assert.are.equal(mime.b64(result), binary_signature_rsa_sha256)
     end)
 
     it("generates correct bytes using rsa-sha512", function()
-      local result, err = sig.sign_binary(key, constants.SIGNATURE_ALGORITHMS.RSA_SHA512, binary_data)
+      local result, err = saml.sign_binary(key, constants.SIGNATURE_ALGORITHMS.RSA_SHA512, binary_data)
       assert.is_nil(err)
       assert.are.equal(mime.b64(result), binary_signature_rsa_sha512)
     end)
@@ -58,32 +56,32 @@ describe("sig", function()
     end)
 
     it("errors for invalid document", function()
-      local result, err = sig.sign_xml(key, constants.SIGNATURE_ALGORITHMS.RSA_SHA256, "plaintext")
+      local result, err = saml.sign_xml(key, constants.SIGNATURE_ALGORITHMS.RSA_SHA256, "plaintext")
       assert.are.equal(err, "unable to parse xml string")
       assert.is_nil(result)
     end)
 
     it("errors for empty document", function()
-      local result, err = sig.sign_xml(key, constants.SIGNATURE_ALGORITHMS.RSA_SHA256, '<?xml version="1.0" encoding="UTF-8"?>')
+      local result, err = saml.sign_xml(key, constants.SIGNATURE_ALGORITHMS.RSA_SHA256, '<?xml version="1.0" encoding="UTF-8"?>')
       assert.are.equal(err, "unable to parse xml string")
       assert.is_nil(result)
     end)
 
     it("errors for document with no id_attr", function()
-      local result, err = sig.sign_xml(key, constants.SIGNATURE_ALGORITHMS.RSA_SHA256, '<?xml version="1.0" encoding="UTF-8"?><Envelope xmlns="urn:envelope"></Envelope>', { id_attr = "ID" })
+      local result, err = saml.sign_xml(key, constants.SIGNATURE_ALGORITHMS.RSA_SHA256, '<?xml version="1.0" encoding="UTF-8"?><Envelope xmlns="urn:envelope"></Envelope>', { id_attr = "ID" })
       assert.are.equal(err, "no ID property on document root")
       assert.is_nil(result)
     end)
 
     it("errors for invalid algorithm", function()
-      local result, err = sig.sign_xml(key, "rsa-sha256", input)
+      local result, err = saml.sign_xml(key, "rsa-sha256", input)
       assert.are.equal(err, "transform not found")
       assert.is_nil(result)
     end)
 
     it("generates correct document using rsa-sha256", function()
       local expected = assert(utils.readfile("/t/data/simple-signed-rsa-sha256.xml"))
-      local result, err = sig.sign_xml(key, constants.SIGNATURE_ALGORITHMS.RSA_SHA256, input)
+      local result, err = saml.sign_xml(key, constants.SIGNATURE_ALGORITHMS.RSA_SHA256, input)
       assert.is_nil(err)
       assert.are.equal(expected, result)
     end)
@@ -94,25 +92,25 @@ describe("sig", function()
   describe(".verify_binary()", function()
 
     it("errors for invalid algorithm", function()
-      local valid, err = sig.verify_binary(cert, "rsa-sha256", "content")
+      local valid, err = saml.verify_binary(cert, "rsa-sha256", "content", "bogus signature")
       assert.are.equal(err, "transform not found")
       assert.is_false(valid)
     end)
 
     it("rejects incorrectly signed content", function()
-      local valid, err = sig.verify_binary(cert, constants.SIGNATURE_ALGORITHMS.RSA_SHA256, binary_data, "bogus signature")
+      local valid, err = saml.verify_binary(cert, constants.SIGNATURE_ALGORITHMS.RSA_SHA256, binary_data, "bogus signature")
       assert.is_nil(err)
       assert.is_false(valid)
     end)
 
     it("verifies correctly signed content using rsa-sha256", function()
-      local valid, err = sig.verify_binary(cert, constants.SIGNATURE_ALGORITHMS.RSA_SHA256, binary_data, mime.unb64(binary_signature_rsa_sha256))
+      local valid, err = saml.verify_binary(cert, constants.SIGNATURE_ALGORITHMS.RSA_SHA256, binary_data, mime.unb64(binary_signature_rsa_sha256))
       assert.is_nil(err)
       assert.is_true(valid)
     end)
 
     it("verifies correctly signed content using rsa-sha512", function()
-      local valid, err = sig.verify_binary(cert, constants.SIGNATURE_ALGORITHMS.RSA_SHA512, binary_data, mime.unb64(binary_signature_rsa_sha512))
+      local valid, err = saml.verify_binary(cert, constants.SIGNATURE_ALGORITHMS.RSA_SHA512, binary_data, mime.unb64(binary_signature_rsa_sha512))
       assert.is_nil(err)
       assert.is_true(valid)
     end)
@@ -125,19 +123,19 @@ describe("sig", function()
 
     setup(function()
       local err
-      mngr, err = assert(sig.create_keys_manager({ cert }))
+      mngr, err = assert(saml.create_keys_manager({ cert }))
     end)
 
     it("rejects an incorrectly signed document", function()
-      local doc = assert(xml.parse_file("/t/data/simple-bad-sig-rsa-sha256.xml"))
-      local valid, err = sig.verify_doc(mngr, doc)
+      local doc = assert(saml.parse_file("/t/data/simple-bad-sig-rsa-sha256.xml"))
+      local valid, err = saml.verify_doc(mngr, doc)
       assert.is_nil(err)
       assert.is_false(valid)
     end)
 
     it("verifies a correctly signed document", function()
-      local doc = assert(xml.parse_file("/t/data/simple-signed-rsa-sha256.xml"))
-      local valid, err = sig.verify_doc(mngr, doc)
+      local doc = assert(saml.parse_file("/t/data/simple-signed-rsa-sha256.xml"))
+      local valid, err = saml.verify_doc(mngr, doc)
       assert.is_nil(err)
       assert.is_true(valid)
     end)

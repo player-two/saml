@@ -16,13 +16,19 @@ external_dependencies = {
   LIBXML2 = {
     library = "xml2"
   },
-  XMLSEC = {
+  XMLSEC1 = {
     library = "xmlsec1"
   },
 }
 build = {
-  type = "builtin",
+  type = "make",
   modules = {
+    saml = {
+      sources = { "saml.c" },
+      libraries = { "xml2", "xmlsec1", },
+      incdirs = { "$(LIBXML2_INCDIR)/libxml2", "$(XMLSEC1_INCDIR)/xmlsec1" },
+      libdirs = { "$(LIBXML2_LIBDIR)", "$(XMLSEC1_LIBDIR)" }
+    },
     ["resty.saml.init"] = "lib/resty/saml/init.lua",
     ["resty.saml.binding"] = "lib/resty/saml/binding.lua",
     ["resty.saml.constants"] = "lib/resty/saml/constants.lua",

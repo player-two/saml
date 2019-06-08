@@ -1,23 +1,23 @@
 describe("xml", function()
-  local xml
+  local saml
   local response
 
   setup(function()
-    xml = require "resty.saml.xml"
-    xml.init({ rock_dir = "/" })
+    saml = require "saml"
+    saml.init({ rock_dir = "/" })
 
-    response = assert(xml.parse_file("/t/data/response.xml"))
+    response = assert(saml.parse_file("/t/data/response.xml"))
   end)
 
   teardown(function()
-    xml.free_doc(response)
+    saml.free_doc(response)
   end)
 
   describe(".session_index()", function()
     local no_index
 
     setup(function()
-      no_index = xml.parse([[<samlp:Response xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol" xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion">
+      no_index = saml.parse([[<samlp:Response xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol" xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion">
   <saml:Assertion>
     <saml:AuthnStatement AuthnInstant="2014-07-17T01:01:48Z" SessionNotOnOrAfter="2024-07-17T09:01:48Z">
     </saml:AuthnStatement>
@@ -26,16 +26,16 @@ describe("xml", function()
     end)
 
     teardown(function()
-      xml.free_doc(no_index)
+      saml.free_doc(no_index)
     end)
 
     it("returns nil if the attribute is not found", function()
-      local index = xml.session_index(no_index)
+      local index = saml.session_index(no_index)
       assert.is_nil(index)
     end)
 
     it("returns the value of the attribute if present", function()
-      local index = xml.session_index(response)
+      local index = saml.session_index(response)
       assert.are.equal("_be9967abd904ddcae3c0eb4189adbe3f71e327cf93", index)
     end)
   end)
@@ -44,7 +44,7 @@ describe("xml", function()
     local no_attrs
 
     setup(function()
-      no_attrs = xml.parse([[<samlp:Response xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol" xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion">
+      no_attrs = saml.parse([[<samlp:Response xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol" xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion">
     <saml:AttributeStatement>
     </saml:AttributeStatement>
   <saml:Assertion>
@@ -53,16 +53,16 @@ describe("xml", function()
     end)
 
     teardown(function()
-      xml.free_doc(no_attrs)
+      saml.free_doc(no_attrs)
     end)
 
     it("returns an empty table if there are no attributes", function()
-      local attrs = xml.attrs(no_attrs)
+      local attrs = saml.attrs(no_attrs)
       assert.are.same({}, attrs)
     end)
 
     it("returns the value of the attribute if present", function()
-      local attrs = xml.attrs(response)
+      local attrs = saml.attrs(response)
       assert.are.same({
         uid = "test",
         mail = "test@example.com",
@@ -75,7 +75,7 @@ describe("xml", function()
     local no_issuer
 
     setup(function()
-      no_issuer = xml.parse([[<samlp:Response xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol" xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion">
+      no_issuer = saml.parse([[<samlp:Response xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol" xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion">
   <samlp:Status>
     <samlp:StatusCode Value="urn:oasis:names:tc:SAML:2.0:status:Success"/>
   </samlp:Status>
@@ -83,16 +83,16 @@ describe("xml", function()
     end)
 
     teardown(function()
-      xml.free_doc(no_issuer)
+      saml.free_doc(no_issuer)
     end)
 
     it("returns nil if the element is not found", function()
-      local issuer = xml.issuer(no_issuer)
+      local issuer = saml.issuer(no_issuer)
       assert.is_nil(issuer)
     end)
 
     it("returns the value of the element if present", function()
-      local issuer = xml.issuer(response)
+      local issuer = saml.issuer(response)
       assert.are.equal("http://idp.example.com/metadata.php", issuer)
     end)
   end)

@@ -3,16 +3,14 @@ local url   = require "socket.url"
 local utils = require "utils"
 
 describe("saml integration", function()
-  local constants, sig, xml
+  local constants
   local key_text, cert_text, response
 
   setup(function()
     constants = require "resty.saml.constants"
-    sig       = require "resty.saml.sig"
-    xml       = require "resty.saml.xml"
+    saml      = require "saml"
 
-    xml.init({ rock_dir = "/" })
-    local err = sig.init()
+    local err = saml.init({ rock_dir = "/" })
     if err then
       print(err)
       assert(nil)
@@ -27,13 +25,13 @@ describe("saml integration", function()
     local doc, mngr
 
     setup(function()
-      local cert = sig.load_cert(cert_text)
-      mngr = sig.create_keys_manager({ cert })
+      local cert = saml.load_cert(cert_text)
+      mngr = saml.create_keys_manager({ cert })
     end)
 
     after_each(function()
       if doc ~= nil then
-        xml.free_doc(doc)
+        saml.free_doc(doc)
       end
     end)
 
@@ -50,8 +48,8 @@ describe("saml integration", function()
       local result = body:match('id="xml_signed"[^>]*>(.+)</textarea>')
       assert.is_not_nil(result)
 
-      doc = assert(xml.parse(utils.html_entity_decode(result)))
-      local valid, err = sig.verify_doc(mngr, doc, { id_attr = "ID" })
+      doc = assert(saml.parse(utils.html_entity_decode(result)))
+      local valid, err = saml.verify_doc(mngr, doc, { id_attr = "ID" })
       assert.is_nil(err)
       assert.is_true(valid)
     end)
@@ -63,8 +61,8 @@ describe("saml integration", function()
       assert.are.equal(result_type, "exit")
       assert.are.equal(result_code, 0)
 
-      doc = assert(xml.parse_file(name))
-      local valid, err = sig.verify_doc(mngr, doc, { id_attr = "ID" })
+      doc = assert(saml.parse(assert(utils.readfile(name))))
+      local valid, err = saml.verify_doc(mngr, doc, { id_attr = "ID" })
       assert.is_nil(err)
       assert.is_true(valid)
     end)
@@ -75,8 +73,8 @@ describe("saml integration", function()
     local key, cert, signed
 
     setup(function()
-      key = assert(sig.load_key(key_text))
-      signed = assert(sig.sign_xml(key, constants.SIGNATURE_ALGORITHMS.RSA_SHA512, response, {
+      key = assert(saml.load_key(key_text))
+      signed = assert(saml.sign_xml(key, constants.SIGNATURE_ALGORITHMS.RSA_SHA512, response, {
         id_attr = "ID",
         insert_after = { constants.XMLNS.ASSERTION, "Issuer", },
       }))

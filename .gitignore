@@ -1,3 +1,5 @@
+saml.o
+saml.so
 out
 .luarocks
 luarocks

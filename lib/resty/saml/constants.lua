@@ -2,9 +2,6 @@
 Constants to be used as arguments for other methods
 ]]
 
-local ffi = require "ffi"
-local xs  = require "resty.saml.internal.xmlsec"
-
 --[[---
 Namespaces for XML documents
 @table XMLNS
@@ -31,8 +28,8 @@ return {
     HTTP_REDIRECT = "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect",
   },
   SIGNATURE_ALGORITHMS = {
-    RSA_SHA256 = ffi.string(assert(xs.xmlSecHrefRsaSha256)),
-    RSA_SHA512 = ffi.string(assert(xs.xmlSecHrefRsaSha512)),
+    RSA_SHA256 = "http://www.w3.org/2001/04/xmldsig-more#rsa-sha256",
+    RSA_SHA512 = "http://www.w3.org/2001/04/xmldsig-more#rsa-sha512",
   },
   STATUS_CODES = {
     SUCCESS = "urn:oasis:names:tc:SAML:2.0:status:Success",
