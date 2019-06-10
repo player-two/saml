@@ -14,9 +14,7 @@ topics = {
 
 file = {
   "../lib/",
-  exclude = {
-    "../lib/resty/saml/internal/",
-  },
+  "../saml.c",
 }
 
 examples = "../example"

@@ -1,3 +1,5 @@
+/// Functions for working with XML documents and signatures
+// @module saml
 #include <string.h>
 
 #include <libxml/xmlmemory.h>
@@ -31,6 +33,13 @@ static const xmlChar* XMLNS_PROTOCOL = (xmlChar*)"urn:oasis:names:tc:SAML:2.0:pr
 static void ingoreGenericError(void* ctx, const char* msg, ...) {};
 static void ingoreStructuredError(void* userData, xmlError* error) {};
 
+/***
+Initialize the libxml2 parser and xmlsec
+@function init
+@tparam[opt={}] table options
+@treturn ?string
+@usage local err = saml.init({ debug = true })
+*/
 static int saml_init(lua_State* L) {
   lua_settop(L, 1);
   luaL_checktype(L, 1, LUA_TTABLE);
@@ -106,6 +115,10 @@ static int saml_init(lua_State* L) {
   return 1;
 }
 
+/***
+Deinitialize libxml2 and xmlsec
+@function shutdown
+*/
 static int saml_shutdown(lua_State* L) {
   // https://www.aleksey.com/xmlsec/api/xmlsec-notes-init-shutdown.html
   xmlSecCryptoShutdown();
@@ -118,6 +131,12 @@ static int saml_shutdown(lua_State* L) {
   return 1;
 }
 
+/***
+Parse xml text into a libxml2 document
+@function parse
+@tparam string str
+@treturn ?xmlDocPtr doc
+*/
 static int parse(lua_State* L) {
   lua_settop(L, 1);
   size_t buf_len;
@@ -133,6 +152,12 @@ static int parse(lua_State* L) {
   return 1;
 }
 
+/***
+Read a file with xml text and parse its contents into a libxml2 document
+@function parse_file
+@tparam string name
+@treturn ?xmlDocPtr doc
+*/
 static int parse_file(lua_State* L) {
   lua_settop(L, 1);
   const char* filename = luaL_checklstring(L, 1, NULL);
@@ -147,6 +172,12 @@ static int parse_file(lua_State* L) {
   return 1;
 }
 
+/***
+Convert a libxml2 document into a string
+@function serialize
+@tparam xmlDocPtr doc
+@treturn string name
+*/
 static int serialize(lua_State* L) {
   lua_settop(L, 1);
   xmlDoc* doc = (xmlDoc*)lua_touserdata(L, 1);
@@ -161,6 +192,12 @@ static int serialize(lua_State* L) {
   return 1;
 }
 
+/***
+Free the memory of a libxml2 document
+The return value of `parse` and `parse_file` should be freed
+@function free_doc
+@tparam xmlDocPtr doc
+*/
 static int free_doc(lua_State* L) {
   lua_settop(L, 1);
   xmlDoc* doc = (xmlDoc*)lua_touserdata(L, 1);
@@ -171,6 +208,12 @@ static int free_doc(lua_State* L) {
   return 0;
 }
 
+/***
+Determine if the libxml2 document is valid according to the SAML XSD
+@function validate_doc
+@tparam xmlDocPtr doc
+@treturn ?string error
+*/
 static int validate_doc(lua_State* L) {
   lua_settop(L, 1);
   xmlDoc* doc = (xmlDoc*)lua_touserdata(L, 1);
@@ -201,6 +244,12 @@ xmlXPathObject* eval_xpath(xmlDoc* doc, xmlXPathCompExpr* xpath) {
   return obj;
 }
 
+/***
+Get the text of the issuer node
+@function issuer
+@tparam xmlDocPtr doc
+@treturn ?string issuer
+*/
 static int saml_issuer(lua_State* L) {
   lua_settop(L, 1);
   xmlDoc* doc = (xmlDoc*)lua_touserdata(L, 1);
@@ -232,6 +281,12 @@ err:
   return 1;
 }
 
+/***
+Get the value of the AuthnStatement[SessionIndex] attribute in the document
+@function session_index
+@tparam xmlDocPtr doc
+@treturn ?string session_index
+*/
 static int saml_session_index(lua_State* L) {
   lua_settop(L, 1);
   xmlDoc* doc = (xmlDoc*)lua_touserdata(L, 1);
@@ -264,6 +319,12 @@ err:
   return 1;
 }
 
+/***
+Get the map of attributes in the document's assertion
+@function attrs
+@tparam xmlDocPtr doc
+@treturn table attributes
+*/
 static int saml_attrs(lua_State* L) {
   lua_settop(L, 1);
   xmlDoc* doc = (xmlDoc*)lua_touserdata(L, 1);
@@ -352,6 +413,12 @@ void add_id(xmlDoc* doc, xmlNode* node, const xmlChar* name) {
   }
 }
 
+/***
+Load a private key from memory
+@function load_key
+@string data private key data
+@treturn xmlSecKeyPtr
+*/
 static int saml_load_key(lua_State* L) {
   lua_settop(L, 1);
   size_t key_len;
@@ -367,6 +434,12 @@ static int saml_load_key(lua_State* L) {
   return 1;
 }
 
+/***
+Load a private key from a file
+@function load_key_file
+@string file path to private key file
+@treturn xmlSecKeyPtr
+*/
 static int saml_load_key_file(lua_State* L) {
   lua_settop(L, 1);
   const char* key_file = luaL_checklstring(L, 1, NULL);
@@ -381,6 +454,13 @@ static int saml_load_key_file(lua_State* L) {
   return 1;
 }
 
+/***
+Add a public key from memory to a private key
+@function key_load_cert
+@tparam xmlSecKeyPtr key
+@tparam string data public key data
+@treturn bool success
+*/
 static int saml_key_load_cert(lua_State* L) {
   lua_settop(L, 2);
   xmlSecKey* key = (xmlSecKey*)lua_touserdata(L, 1);
@@ -398,6 +478,13 @@ static int saml_key_load_cert(lua_State* L) {
   return 1;
 }
 
+/***
+Add a public key from a file to a private key
+@function key_load_cert_file
+@tparam xmlSecKeyPtr key
+@tparam string file path to public key data
+@treturn bool success
+*/
 static int saml_key_load_cert_file(lua_State* L) {
   lua_settop(L, 2);
   xmlSecKey* key = (xmlSecKey*)lua_touserdata(L, 1);
@@ -414,6 +501,12 @@ static int saml_key_load_cert_file(lua_State* L) {
   return 1;
 }
 
+/***
+Load a public key from memory
+@function load_cert
+@string data public key data
+@treturn xmlSecKeyPtr
+*/
 static int saml_load_cert(lua_State* L) {
   lua_settop(L, 1);
   size_t cert_len;
@@ -425,6 +518,12 @@ static int saml_load_cert(lua_State* L) {
   return 1;
 }
 
+/***
+Load a public key from a file
+@function load_cert_file
+@string file path to public key file
+@treturn xmlSecKeyPtr
+*/
 static int saml_load_cert_file(lua_State* L) {
   lua_settop(L, 1);
   const char* cert_file = luaL_checklstring(L, 1, NULL);
@@ -439,6 +538,16 @@ static int saml_load_cert_file(lua_State* L) {
   return 1;
 }
 
+/***
+Create a keys manager with zero or more keys
+@function create_keys_manager
+@tparam {xmlSecKeyPtr,...} keys
+@treturn ?xmlSecKeysMngrPtr
+@treturn ?string error
+@usage
+local cert = saml.load_cert_file("/path/to/cert.pem")
+local mngr, err = saml.create_keys_manager({ cert })
+*/
 static int saml_create_keys_mngr(lua_State* L) {
   lua_settop(L, 1);
   luaL_checktype(L, 1, LUA_TTABLE);
@@ -481,6 +590,16 @@ static int saml_create_keys_mngr(lua_State* L) {
   return 2;
 }
 
+/***
+Calculate a signature for a string
+@function sign_binary
+@tparam xmlSecKeyPtr key
+@tparam string sig_alg
+@tparam string data
+@treturn ?string signature
+@treturn ?string error
+@see resty.saml.constants:SIGNATURE_ALGORITHMS
+*/
 static int saml_sign_binary(lua_State* L) {
   lua_settop(L, 3);
 
@@ -698,6 +817,16 @@ int sign_get_opts(lua_State* L, int i, const xmlChar** id_attr, const xmlChar** 
   }
 }
 
+/***
+Sign an XML document (mutates the input)
+@function sign_doc
+@tparam xmlSecKeyPtr key
+@tparam string sig_alg
+@tparam xmlDocPtr doc
+@tparam[opt={}] table options
+@treturn ?string error
+@see resty.saml.constants:SIGNATURE_ALGORITHMS
+*/
 static int saml_sign_doc(lua_State* L) {
   lua_settop(L, 4);
 
@@ -717,7 +846,18 @@ static int saml_sign_doc(lua_State* L) {
   return saml_sign_doc_impl(L, key, sig_alg, doc, id_attr, namespace, element);
 }
 
-
+/***
+Sign an XML string
+@function sign_xml
+@tparam xmlSecKeyPtr key
+@tparam string sig_alg
+@tparam string str
+@tparam[opt={}] table options
+@treturn ?string signed xml
+@treturn ?string error
+@see sign_doc
+@see resty.saml.constants:SIGNATURE_ALGORITHMS
+*/
 static int saml_sign_xml(lua_State* L) {
   lua_settop(L, 4);
 
@@ -763,6 +903,17 @@ static int saml_sign_xml(lua_State* L) {
   return res + 1;
 }
 
+/***
+Verify a signature for a string
+@function verify_binary
+@tparam xmlSecKeyPtr cert
+@tparam string sig_alg
+@tparam string data
+@tparam string signature
+@treturn bool valid
+@treturn ?string error
+@see resty.saml.constants:SIGNATURE_ALGORITHMS
+*/
 static int saml_verify_binary(lua_State* L) {
   lua_settop(L, 4);
 
@@ -852,6 +1003,15 @@ static int saml_verify_binary(lua_State* L) {
   return 2;
 }
 
+/***
+Verify that a XML document has been signed with the key corresponding to a cert
+@function verify_doc
+@tparam xmlSecKeysMngrPtr mngr
+@tparam xmlDocPtr doc
+@tparam[opt={}] table options
+@treturn bool valid
+@treturn ?string error
+*/
 static int saml_verify_doc(lua_State* L) {
   lua_settop(L, 3);
 

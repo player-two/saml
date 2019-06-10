@@ -5,8 +5,7 @@ Functions for creating or parsing SAML bindings
 local zlib = require "zlib"
 
 local constants = require "resty.saml.constants"
-local sig       = require "resty.saml.sig"
-local xml       = require "resty.saml.xml"
+local saml      = require "saml"
 
 local _M = {}
 
@@ -77,7 +76,7 @@ Create a redirect binding
 @tparam table params
 @treturn ?string signature
 @treturn ?string error
-@see sig.sign_binary
+@see saml.sign_binary
 @see constants:SIGNATURE_ALGORITHMS
 ]]
 function _M.create_redirect(key, params)
@@ -102,7 +101,7 @@ function _M.create_redirect(key, params)
   end
   query_string = query_string .. "&SigAlg=" .. encode_uri(params.SigAlg)
 
-  local signature, err = sig.sign_binary(key, params.SigAlg, query_string)
+  local signature, err = saml.sign_binary(key, params.SigAlg, query_string)
   if err then return nil, err end
   return query_string .. "&Signature=" .. encode_uri(ngx.encode_base64(signature)), nil
 end
@@ -114,7 +113,7 @@ Parse a redirect binding
 @treturn ?xmlDocPtr doc
 @treturn ?table attrs
 @treturn ?string error
-@see sig.verify_binary
+@see saml.verify_binary
 ]]
 function _M.parse_redirect(saml_type, cert_from_doc)
   if ngx.req.get_method() ~= "GET" then return nil, nil, "method not allowed" end
@@ -136,10 +135,10 @@ function _M.parse_redirect(saml_type, cert_from_doc)
   local xml_str = ngx.decode_base64(encoded)
   if not xml_str then return nil, args, "decompressed " .. saml_type .. " is not valid base64" end
 
-  local doc = xml.parse(xml_str)
+  local doc = saml.parse(xml_str)
   if doc == nil then return nil, args, saml_type .. " is not valid xml" end
 
-  local err = xml.validate_doc(doc)
+  local err = saml.validate_doc(doc)
   if err then return doc, args, err end
 
   local cert = cert_from_doc(doc)
@@ -151,7 +150,7 @@ function _M.parse_redirect(saml_type, cert_from_doc)
   end
   sig_input = sig_input .. "&SigAlg=" .. ngx.escape_uri(args.SigAlg)
 
-  local valid, err = sig.verify_binary(cert, args.SigAlg, sig_input, signature)
+  local valid, err = saml.verify_binary(cert, args.SigAlg, sig_input, signature)
   if err then return doc, args, err end
   if not valid then return doc, args, "invalid signature" end
 
@@ -166,12 +165,12 @@ Create a post binding
 @tparam table params
 @treturn ?string html
 @treturn ?string error
-@see sig.sign_xml
+@see saml.sign_xml
 ]]
 function _M.create_post(key, sig_alg, destination, params)
   local xml_str = params.SAMLRequest or params.SAMLResponse
   assert(xml_str, "no saml request or response")
-  local req, err = sig.sign_xml(key, sig_alg, xml_str)
+  local req, err = saml.sign_xml(key, sig_alg, xml_str)
   if err then return nil, err end
   local encoded = ngx.encode_base64(req)
 
@@ -192,7 +191,7 @@ Parse a post binding
 @treturn ?xmlDocPtr doc
 @treturn table args
 @treturn ?string error
-@see sig.verify_doc
+@see saml.verify_doc
 ]]
 function _M.parse_post(saml_type, cert_from_doc)
   if ngx.req.get_method() ~= "POST" then return nil, nil, "method not allowed" end
@@ -207,19 +206,19 @@ function _M.parse_post(saml_type, cert_from_doc)
   local content = ngx.decode_base64(encoded)
   if not content then return nil, args, saml_type .. " is not valid base64" end
 
-  local doc = xml.parse(content)
+  local doc = saml.parse(content)
   if doc == nil then return nil, args, saml_type .. " is not valid xml" end
 
-  local err = xml.validate_doc(doc)
+  local err = saml.validate_doc(doc)
   if err then return doc, args, err end
 
   local cert = cert_from_doc(doc)
   if not cert then return doc, args, "no cert" end
 
-  local mngr, err = sig.create_keys_manager({ cert })
+  local mngr, err = saml.create_keys_manager({ cert })
   if err then return doc, args, err end
 
-  local valid, err = sig.verify_doc(mngr, doc)
+  local valid, err = saml.verify_doc(mngr, doc)
   if err then return doc, args, err end
   if not valid then return doc, args, "invalid signature" end
 
