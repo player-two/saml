@@ -1,3 +1,5 @@
+lua_saml.o
+lua_saml.so
 saml.o
 saml.so
 out

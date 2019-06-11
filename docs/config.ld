@@ -14,7 +14,7 @@ topics = {
 
 file = {
   "../lib/",
-  "../saml.c",
+  "../lua_saml.c",
 }
 
 examples = "../example"

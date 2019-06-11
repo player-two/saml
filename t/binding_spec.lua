@@ -2,24 +2,22 @@ local mime  = require "mime"
 local utils = require "utils"
 
 describe("binding", function()
-  local binding, constants, xml
+  local binding, constants, saml
 
   local redirect_signature = ""
 
   setup(function()
-    sig = {
-      create_keys_manager = stub(),
-      sign_binary         = stub(),
-      verify_binary       = stub(),
-      sign_xml            = stub(),
-      verify_doc          = stub(),
+    saml = {
+      find_transform_by_href  = stub().returns("alg"),
+      parse                   = stub(),
+      validate_doc            = stub(),
+      create_keys_manager     = stub(),
+      sign_binary             = stub(),
+      verify_binary           = stub(),
+      sign_xml                = stub(),
+      verify_doc              = stub(),
     }
-    package.loaded["resty.saml.sig"] = sig
-    xml = {
-      parse         = stub(),
-      validate_doc  = stub(),
-    }
-    package.loaded["resty.saml.xml"] = xml
+    package.loaded["saml"] = saml
 
     binding   = require "resty.saml.binding"
     constants = require "resty.saml.constants"
@@ -38,16 +36,12 @@ describe("binding", function()
   end)
 
   teardown(function()
-    package.loaded["resty.saml.sig"] = nil
-    package.loaded["resty.saml.xml"] = nil
+    package.loaded["saml"] = nil
     _G.ngx = nil
   end)
 
   before_each(function()
-    for _, m in pairs(sig) do
-      m:clear()
-    end
-    for _, m in pairs(xml) do
+    for _, m in pairs(saml) do
       m:clear()
     end
     for _, m in pairs(_G.ngx.req) do
@@ -59,22 +53,22 @@ describe("binding", function()
   describe(".create_redirect()", function()
 
     it("constructs the query string for the signature", function()
-      sig.sign_binary.returns(nil, "signature failed")
+      saml.sign_binary.returns(nil, "signature failed")
       binding.create_redirect("key", { SigAlg = "alg", SAMLRequest = "xml", RelayState = "relay_state" })
-      assert.spy(sig.sign_binary).was.called_with("key", "alg", match._)
-      local args = sig.sign_binary.calls[1].vals
+      assert.spy(saml.sign_binary).was.called_with("key", "alg", match._)
+      local args = saml.sign_binary.calls[1].vals
       assert.are.equal("SAMLRequest=eJxLdTcsBgADQgFR&RelayState=relay_state&SigAlg=alg", args[3])
     end)
 
     it("errors for signature failure", function()
-      sig.sign_binary.returns(nil, "signature failed")
+      saml.sign_binary.returns(nil, "signature failed")
       local query_string, err = binding.create_redirect("key", { SigAlg = "alg", SAMLRequest = "xml", RelayState = "relay_state" })
       assert.are.equal("signature failed", err)
       assert.is_nil(query_string)
     end)
 
     it("creates a full query string", function()
-      sig.sign_binary.returns("signature", nil)
+      saml.sign_binary.returns("signature", nil)
       local query_string, err = binding.create_redirect("key", { SigAlg = "alg", SAMLRequest = "xml", RelayState = "relay_state" })
       assert.is_nil(err)
       assert.are.equal("SAMLRequest=eJxLdTcsBgADQgFR&RelayState=relay_state&SigAlg=alg&Signature=c2lnbmF0dXJl", query_string)
@@ -97,9 +91,9 @@ describe("binding", function()
     before_each(function()
       _G.ngx.req.get_method.returns("GET")
       _G.ngx.req.get_uri_args.returns(default_args)
-      sig.verify_binary.returns(true, nil)
-      xml.parse.returns(parsed)
-      xml.validate_doc.returns(nil)
+      saml.verify_binary.returns(true, nil)
+      saml.parse.returns(parsed)
+      saml.validate_doc.returns(nil)
     end)
 
     it("errors for non-GET method", function()
@@ -119,7 +113,7 @@ describe("binding", function()
     end)
 
     it("errors for invalid xml", function()
-      xml.parse.returns(nil)
+      saml.parse.returns(nil)
       local doc, args, err = binding.parse_redirect("SAMLRequest", cb_error)
       assert.are.equal("SAMLRequest is not valid xml", err)
       assert.is_nil(doc)
@@ -127,7 +121,7 @@ describe("binding", function()
     end)
 
     it("errors for invalid document", function()
-      xml.validate_doc.returns("invalid")
+      saml.validate_doc.returns("invalid")
       local doc, args, err = binding.parse_redirect("SAMLRequest", cb_error)
       assert.are.equal("invalid", err)
       assert.are.equal(parsed, doc)
@@ -143,8 +137,8 @@ describe("binding", function()
 
     it("passes args to verify function", function()
       binding.parse_redirect("SAMLRequest", cb)
-      assert.spy(sig.verify_binary).was.called(1)
-      local args = sig.verify_binary.calls[1].vals
+      assert.spy(saml.verify_binary).was.called(1)
+      local args = saml.verify_binary.calls[1].vals
       assert.are.equal(args[1], "-----BEGIN CERTIFICATE-----")
       assert.are.equal(args[2], "alg")
       assert.are.equal(args[3], "SAMLRequest=eJxLdTcsBgADQgFR&RelayState=relay_state&SigAlg=alg")
@@ -152,21 +146,21 @@ describe("binding", function()
     end)
 
     it("errors for verify failure", function()
-      sig.verify_binary.returns(false, "verify failed")
+      saml.verify_binary.returns(false, "verify failed")
       local doc, args, err = binding.parse_redirect("SAMLRequest", cb)
       assert.are.equal(err, "verify failed")
       assert.are.equal(parsed, doc)
     end)
 
     it("errors for invalid signature", function()
-      sig.verify_binary.returns(false, nil)
+      saml.verify_binary.returns(false, nil)
       local doc, args, err = binding.parse_redirect("SAMLRequest", cb)
       assert.are.equal(err, "invalid signature")
       assert.are.equal(parsed, doc)
     end)
 
     it("returns the parsed document", function()
-      sig.verify_binary.returns(true, nil)
+      saml.verify_binary.returns(true, nil)
       local doc, args, err = binding.parse_redirect("SAMLRequest", cb)
       assert.is_nil(err)
       assert.are.equal(parsed, doc)
@@ -177,17 +171,17 @@ describe("binding", function()
   describe(".create_post()", function()
 
     before_each(function()
-      sig.sign_xml.returns("signed request", nil)
+      saml.sign_xml.returns("signed request", nil)
     end)
 
     it("signs a request", function()
       binding.create_post("key", "alg", "dest", { SAMLRequest = "request" })
-      assert.spy(sig.sign_xml).was.called_with("key", "alg", "request")
+      assert.spy(saml.sign_xml).was.called_with("key", "alg", "request")
     end)
 
     it("signs a response", function()
       binding.create_post("key", "alg", "dest", { SAMLResponse = "response" })
-      assert.spy(sig.sign_xml).was.called_with("key", "alg", "response")
+      assert.spy(saml.sign_xml).was.called_with("key", "alg", "response")
     end)
 
     it("aborts without a request or response", function()
@@ -197,7 +191,7 @@ describe("binding", function()
     end)
 
     it("errors for signature failure", function()
-      sig.sign_xml.returns(nil, "signature failed")
+      saml.sign_xml.returns(nil, "signature failed")
       local html, err = binding.create_post("key", "alg", "dest", { SAMLRequest = "request" })
       assert.are.equal("signature failed", err)
       assert.is_nil(html)
@@ -244,10 +238,10 @@ describe("binding", function()
     before_each(function()
       _G.ngx.req.get_method.returns("POST")
       _G.ngx.req.get_post_args.returns(default_args, nil)
-      sig.create_keys_manager.returns(mngr)
-      sig.verify_doc.returns(true, nil)
-      xml.parse.returns(parsed)
-      xml.validate_doc.returns(nil)
+      saml.create_keys_manager.returns(mngr)
+      saml.verify_doc.returns(true, nil)
+      saml.parse.returns(parsed)
+      saml.validate_doc.returns(nil)
     end)
 
     it("errors for non-POST method", function()
@@ -275,16 +269,16 @@ describe("binding", function()
     end)
 
     it("errors for invalid xml", function()
-      xml.parse.returns(nil)
+      saml.parse.returns(nil)
       local doc, args, err = binding.parse_post("SAMLRequest", cb_error)
-      assert.spy(xml.parse).was.called_with("<Response>")
+      assert.spy(saml.parse).was.called_with("<Response>")
       assert.are.equal("SAMLRequest is not valid xml", err)
       assert.is_nil(doc)
       assert.are.same(default_args, args)
     end)
 
     it("errors for invalid document", function()
-      xml.validate_doc.returns("invalid")
+      saml.validate_doc.returns("invalid")
       local doc, args, err = binding.parse_post("SAMLRequest", cb_error)
       assert.are.equal("invalid", err)
       assert.are.equal(parsed, doc)
@@ -298,28 +292,28 @@ describe("binding", function()
 
     it("passes args to verify function", function()
       binding.parse_post("SAMLRequest", cb)
-      assert.spy(sig.verify_doc).was.called(1)
-      local args = sig.verify_doc.calls[1].vals
+      assert.spy(saml.verify_doc).was.called(1)
+      local args = saml.verify_doc.calls[1].vals
       assert.are.same(mngr, args[1])
       assert.are.equal(parsed, args[2])
     end)
 
     it("errors for verify failure", function()
-      sig.verify_doc.returns(false, "verify failed")
+      saml.verify_doc.returns(false, "verify failed")
       local doc, args, err = binding.parse_post("SAMLRequest", cb)
       assert.are.equal(err, "verify failed")
       assert.are.equal(parsed, doc)
     end)
 
     it("errors for invalid signature", function()
-      sig.verify_doc.returns(false, nil)
+      saml.verify_doc.returns(false, nil)
       local doc, args, err = binding.parse_post("SAMLRequest", cb)
       assert.are.equal(err, "invalid signature")
       assert.are.equal(parsed, doc)
     end)
 
     it("returns the parsed document", function()
-      sig.verify_doc.returns(true, nil)
+      saml.verify_doc.returns(true, nil)
       local doc, args, err = binding.parse_post("SAMLRequest", cb)
       assert.is_nil(err)
       assert.are.equal(parsed, doc)

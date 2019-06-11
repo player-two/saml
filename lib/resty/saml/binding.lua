@@ -95,13 +95,16 @@ function _M.create_redirect(key, params)
   local deflated_encoded = ngx.encode_base64(deflated)
   if not deflated_encoded then return nil, "decompressed " .. saml_type .. " cannot be base64 encoded" end
 
+  local transform_id = saml.find_transform_by_href(params.SigAlg)
+  if not transform_id then return nil, "signature algorithm not found" end
+
   local query_string = saml_type .. "=" .. encode_uri(deflated_encoded)
   if params.RelayState then
     query_string = query_string .. "&RelayState=" .. encode_uri(params.RelayState)
   end
   query_string = query_string .. "&SigAlg=" .. encode_uri(params.SigAlg)
 
-  local signature, err = saml.sign_binary(key, params.SigAlg, query_string)
+  local signature, err = saml.sign_binary(key, transform_id, query_string)
   if err then return nil, err end
   return query_string .. "&Signature=" .. encode_uri(ngx.encode_base64(signature)), nil
 end
@@ -123,6 +126,9 @@ function _M.parse_redirect(saml_type, cert_from_doc)
   if not encoded_inflated then return nil, args, "no " .. saml_type end
 
   if not args.SigAlg then return nil, args, "no SigAlg" end
+  local transform_id = saml.find_transform_by_href(args.SigAlg)
+  if not transform_id then return nil, "signature algorithm not found" end
+
   if not args.Signature then return nil, args, "no Signature" end
   local signature = ngx.decode_base64(args.Signature)
   if not signature then return nil, args, "signature is not valid base64" end
@@ -150,7 +156,7 @@ function _M.parse_redirect(saml_type, cert_from_doc)
   end
   sig_input = sig_input .. "&SigAlg=" .. ngx.escape_uri(args.SigAlg)
 
-  local valid, err = saml.verify_binary(cert, args.SigAlg, sig_input, signature)
+  local valid, err = saml.verify_binary(cert, transform_id, sig_input, signature)
   if err then return doc, args, err end
   if not valid then return doc, args, "invalid signature" end
 
@@ -160,17 +166,17 @@ end
 --[[---
 Create a post binding
 @tparam xmlSecKeyPtr key
-@tparam string sig_alg
+@tparam xmlSecTransformId transform_id
 @tparam string destination
 @tparam table params
 @treturn ?string html
 @treturn ?string error
 @see saml.sign_xml
 ]]
-function _M.create_post(key, sig_alg, destination, params)
+function _M.create_post(key, transform_id, destination, params)
   local xml_str = params.SAMLRequest or params.SAMLResponse
   assert(xml_str, "no saml request or response")
-  local req, err = saml.sign_xml(key, sig_alg, xml_str)
+  local req, err = saml.sign_xml(key, transform_id, xml_str)
   if err then return nil, err end
   local encoded = ngx.encode_base64(req)
 

@@ -10,7 +10,9 @@ OPENRESTY_HOME=/usr/local/openresty
 docker run --rm -it \
   -v `pwd`/lib/resty/:$OPENRESTY_HOME/luajit/share/lua/5.1/resty/ \
   -v `pwd`/data:/data \
+  -v `pwd`/saml.h:/tmp/saml.h \
   -v `pwd`/saml.c:/tmp/saml.c \
+  -v `pwd`/lua_saml.c:/tmp/lua_saml.c \
   -v `pwd`/Makefile:/tmp/Makefile \
   -v `pwd`/t:/t \
   -w /t \

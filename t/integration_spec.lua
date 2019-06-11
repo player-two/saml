@@ -74,7 +74,8 @@ describe("saml integration", function()
 
     setup(function()
       key = assert(saml.load_key(key_text))
-      signed = assert(saml.sign_xml(key, constants.SIGNATURE_ALGORITHMS.RSA_SHA512, response, {
+      local transform_id = assert(saml.find_transform_by_href(constants.SIGNATURE_ALGORITHMS.RSA_SHA512))
+      signed = assert(saml.sign_xml(key, transform_id, response, {
         id_attr = "ID",
         insert_after = { constants.XMLNS.ASSERTION, "Issuer", },
       }))
