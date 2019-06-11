@@ -6,7 +6,7 @@ if [ "$args" == "" ]; then
 fi
 
 OPENRESTY_HOME=/usr/local/openresty
-#/usr/local/openresty/luajit/lib/luarocks/rocks/lua-resty-saml/dev-1/
+
 docker run --rm -it \
   -v `pwd`/lib/:/tmp/lib/ \
   -v `pwd`/data:/tmp/data \

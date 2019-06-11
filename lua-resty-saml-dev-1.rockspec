@@ -1,7 +1,7 @@
 package = "lua-resty-saml"
 version = "dev-1"
 source = {
-  url = "https://github.com/megalord/lua-resty-saml"
+  url = "git://github.com/megalord/lua-resty-saml.git"
 }
 description = {
   summary = "Provides SAML support for OpenResty",

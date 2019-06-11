@@ -728,9 +728,10 @@ static const struct luaL_Reg saml_funcs[] = {
 
 
 int luaopen_saml(lua_State* L) {
+#if (LUA_VERSION_NUM >= 502)
   luaL_newlib(L, saml_funcs);
-  //lua_pushliteral(L, "");
-  //lua_pushlightuserdata(L, );
-  //lua_settable(L, -3);
+#else
+  luaL_register(L, "saml", saml_funcs);
+#endif
   return 1;
 }
