@@ -4,7 +4,8 @@ describe("xml", function()
 
   setup(function()
     saml = require "saml"
-    saml.init({ rock_dir = "/" })
+    local err = saml.init({ rock_dir=assert(os.getenv("ROCK_DIR")) })
+    if err then print(err) assert(nil) end
 
     response = assert(saml.parse_file("/t/data/response.xml"))
   end)

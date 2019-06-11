@@ -1,7 +1,7 @@
 package = "lua-resty-saml"
 version = "dev-1"
 source = {
-  url = "git+ssh://git@github.com/megalord/lua-resty-saml.git"
+  url = "https://github.com/megalord/lua-resty-saml"
 }
 description = {
   summary = "Provides SAML support for OpenResty",
@@ -22,23 +22,21 @@ external_dependencies = {
 }
 build = {
   type = "make",
-  modules = {
-    saml = {
-      sources = { "saml.c" },
-      libraries = { "xml2", "xmlsec1", },
-      incdirs = { "$(LIBXML2_INCDIR)/libxml2", "$(XMLSEC1_INCDIR)/xmlsec1" },
-      libdirs = { "$(LIBXML2_LIBDIR)", "$(XMLSEC1_LIBDIR)" }
-    },
-    ["resty.saml.init"] = "lib/resty/saml/init.lua",
-    ["resty.saml.binding"] = "lib/resty/saml/binding.lua",
-    ["resty.saml.constants"] = "lib/resty/saml/constants.lua",
-    ["resty.saml.internal.xml"] = "lib/resty/saml/internal/xml.lua",
-    ["resty.saml.internal.xmlsec"] = "lib/resty/saml/internal/xmlsec.lua",
-    ["resty.saml.internal.xmlsec-cdef"] = "lib/resty/saml/internal/xmlsec-cdef.lua",
-    ["resty.saml.sig"] = "lib/resty/saml/sig.lua",
-    ["resty.saml.xml"] = "lib/resty/saml/xml.lua",
+  build_variables = {
+    CFLAGS="$(CFLAGS)",
+    LIBFLAG="$(LIBFLAG)",
+    LUA_INCDIR="$(LUA_INCDIR)",
+    LIBXML2_LIBDIR="$(LIBXML2_LIBDIR)",
+    LIBXML2_INCDIR="$(LIBXML2_INCDIR)",
+    XMLSEC1_LIBDIR="$(XMLSEC1_LIBDIR)",
+    XMLSEC1_INCDIR="$(XMLSEC1_INCDIR)",
+  },
+  install_variables = {
+    INST_LIBDIR="$(LIBDIR)",
+    INST_LUADIR="$(LUADIR)",
+    INST_CONFDIR="$(CONFDIR)",
   },
   copy_directories = {
     "data",
-  }
+  },
 }

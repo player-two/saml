@@ -60,7 +60,7 @@ int saml_init(saml_init_opts_t* opts) {
   }
   memcpy(data_dir, opts->rock_dir, rock_dir_len);
   memcpy(data_dir + rock_dir_len, XSD_MAIN, xsd_main_len);
-  data_dir[rock_dir_len + xsd_main_len + 1] = '\0';
+  data_dir[rock_dir_len + xsd_main_len] = '\0';
 
   xmlSchemaParserCtxt* parser_ctx = xmlSchemaNewParserCtxt(data_dir);
   if (parser_ctx == NULL) {

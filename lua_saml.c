@@ -729,5 +729,8 @@ static const struct luaL_Reg saml_funcs[] = {
 
 int luaopen_saml(lua_State* L) {
   luaL_newlib(L, saml_funcs);
+  //lua_pushliteral(L, "");
+  //lua_pushlightuserdata(L, );
+  //lua_settable(L, -3);
   return 1;
 }

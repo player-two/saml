@@ -6,16 +6,17 @@ if [ "$args" == "" ]; then
 fi
 
 OPENRESTY_HOME=/usr/local/openresty
-
+#/usr/local/openresty/luajit/lib/luarocks/rocks/lua-resty-saml/dev-1/
 docker run --rm -it \
-  -v `pwd`/lib/resty/:$OPENRESTY_HOME/luajit/share/lua/5.1/resty/ \
-  -v `pwd`/data:/data \
+  -v `pwd`/lib/:/tmp/lib/ \
+  -v `pwd`/data:/tmp/data \
   -v `pwd`/saml.h:/tmp/saml.h \
   -v `pwd`/saml.c:/tmp/saml.c \
   -v `pwd`/lua_saml.c:/tmp/lua_saml.c \
   -v `pwd`/Makefile:/tmp/Makefile \
+  -v `pwd`/lua-resty-saml-dev-1.rockspec:/tmp/lua-resty-saml-dev-1.rockspec \
   -v `pwd`/t:/t \
   -w /t \
-  -e LD_LIBRARY_PATH=$OPENRESTY_HOME/luajit/lib:/usr/local/lib \
+  -e ROCK_DIR=$OPENRESTY_HOME/luajit/lib/luarocks/rocks/lua-resty-saml/dev-1/ \
   resty-saml-test:latest \
-  bash -c "cd /tmp && make build && cp saml.so $OPENRESTY_HOME/lualib/ && cd /t && busted -lpath /usr/local/openresty/lualib/?.lua -cpath /usr/local/openresty/lualib/?.so $args"
+  bash -c "cd /tmp && luarocks make && cd /t && busted -lpath /usr/local/openresty/lualib/?.lua -cpath /usr/local/openresty/lualib/?.so $args"

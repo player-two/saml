@@ -10,11 +10,8 @@ describe("saml integration", function()
     constants = require "resty.saml.constants"
     saml      = require "saml"
 
-    local err = saml.init({ rock_dir = "/" })
-    if err then
-      print(err)
-      assert(nil)
-    end
+    local err = saml.init({ rock_dir=assert(os.getenv("ROCK_DIR")) })
+    if err then print(err) assert(nil) end
 
     key_text = assert(utils.readfile("/t/data/idp.key"))
     cert_text = assert(utils.readfile("/t/data/idp.crt"))
