@@ -88,7 +88,7 @@ int saml_init(saml_init_opts_t* opts) {
     return -1;
   }
 
-  if (xmlSecCheckVersionExt(1, 1, 28, xmlSecCheckVersionABICompatible) != 1) {
+  if (xmlSecCheckVersion() != 1) {
     saml_log("loaded xmlsec library version is not compatible");
     return -1;
   }

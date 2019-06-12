@@ -24,6 +24,7 @@ build = {
   type = "make",
   build_variables = {
     CFLAGS="$(CFLAGS)",
+    LDFLAGS="$(LDFLAGS)",
     LIBFLAG="$(LIBFLAG)",
     LUA_INCDIR="$(LUA_INCDIR)",
     LIBXML2_LIBDIR="$(LIBXML2_LIBDIR)",

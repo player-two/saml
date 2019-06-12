@@ -9,8 +9,7 @@ RUN curl https://www.aleksey.com/xmlsec/download/xmlsec1-${XMLSEC_VERSION}.tar.g
     ./configure --disable-crypto-dl && \
     make && \
     make check && \
-    make install
-
-ENV LD_LIBRARY_PATH=/usr/local/lib
+    make install && \
+    ldconfig /usr/local/lib
 
 RUN luarocks install lua-zlib 1.2-0
