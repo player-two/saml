@@ -1,3 +1,6 @@
+#ifndef _SAML_H
+#define _SAML_H
+
 #include <libxml/xmlstring.h>
 #include <libxml/tree.h>
 
@@ -5,12 +8,20 @@
 #include <xmlsec/transforms.h>
 
 
-const xmlChar* XMLNS_ASSERTION;
-const xmlChar* XMLNS_PROTOCOL;
+const char* SAML_XMLNS_ASSERTION;
+const char* SAML_XMLNS_PROTOCOL;
+
+const char* SAML_BINDING_HTTP_POST;
+const char* SAML_BINDING_HTTP_REDIRECT;
+
+const char* SAML_STATUS_SUCCESS;
+const char* SAML_STATUS_REQUESTER;
+const char* SAML_STATUS_RESPONDER;
+const char* SAML_STATUS_VERSION_MISMATCH;
 
 typedef struct {
   int debug;
-  char* rock_dir;
+  const char* rock_dir;
 } saml_init_opts_t;
 
 typedef struct {
@@ -38,3 +49,5 @@ xmlSecTransformCtx* saml_sign_binary(xmlSecKey* key, xmlSecTransformId transform
 int saml_verify_binary(xmlSecKey* cert, xmlSecTransformId transform_id, unsigned char* data, size_t data_len, unsigned char* sig, size_t sig_len);
 int saml_sign_doc(xmlSecKey* key, xmlSecTransformId transform_id, xmlDoc* doc, saml_doc_opts_t* opts);
 int saml_verify_doc(xmlSecKeysMngr* mngr, xmlDoc* doc, saml_doc_opts_t* opts);
+
+#endif

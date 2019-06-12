@@ -19,9 +19,8 @@ describe("sig", function()
     assert(saml.key_load_cert_file(key, "/t/data/sp.crt"))
     cert = assert(saml.load_cert_file("/t/data/sp.crt"))
 
-    local constants = require "resty.saml.constants"
-    transform_sha256 = assert(saml.find_transform_by_href(constants.SIGNATURE_ALGORITHMS.RSA_SHA256))
-    transform_sha512 = assert(saml.find_transform_by_href(constants.SIGNATURE_ALGORITHMS.RSA_SHA512))
+    transform_sha256 = assert(saml.find_transform_by_href(utils.xmlSecHrefRsaSha256))
+    transform_sha512 = assert(saml.find_transform_by_href(utils.xmlSecHrefRsaSha512))
   end)
 
 

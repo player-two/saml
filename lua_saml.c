@@ -26,6 +26,7 @@ static int init(lua_State* L) {
   lua_getfield(L, 1, "rock_dir");
 
   saml_init_opts_t opts;
+  luaL_argcheck(L, lua_isboolean(L, 2) || lua_isnil(L, 2), 2, "debug must be a boolean");
   opts.debug = lua_toboolean(L, 2);
   opts.rock_dir = luaL_checklstring(L, 3, NULL);
   lua_pop(L, 2);
@@ -436,7 +437,6 @@ Find a transform by href
 @function find_transform_by_href
 @tparam string href
 @treturn ?xmlSecTransformId
-@see resty.saml.constants:SIGNATURE_ALGORITHMS
 */
 static int find_transform_by_href(lua_State* L) {
   lua_settop(L, 1);
@@ -462,7 +462,6 @@ Calculate a signature for a string
 @tparam string data
 @treturn ?string signature
 @treturn ?string error
-@see resty.saml.constants:SIGNATURE_ALGORITHMS
 */
 static int sign_binary(lua_State* L) {
   lua_settop(L, 3);
@@ -534,7 +533,6 @@ Sign an XML document (mutates the input)
 @tparam xmlDocPtr doc
 @tparam[opt={}] table options
 @treturn ?string error
-@see resty.saml.constants:SIGNATURE_ALGORITHMS
 */
 static int sign_doc(lua_State* L) {
   lua_settop(L, 4);
@@ -571,7 +569,6 @@ Sign an XML string
 @tparam[opt={}] table options
 @treturn ?string signed xml
 @see sign_doc
-@see resty.saml.constants:SIGNATURE_ALGORITHMS
 */
 static int sign_xml(lua_State* L) {
   lua_settop(L, 4);
@@ -622,7 +619,6 @@ Verify a signature for a string
 @tparam string signature
 @treturn bool valid
 @treturn ?string error
-@see resty.saml.constants:SIGNATURE_ALGORITHMS
 */
 static int verify_binary(lua_State* L) {
   lua_settop(L, 4);
@@ -727,11 +723,24 @@ static const struct luaL_Reg saml_funcs[] = {
 };
 
 
+#define SETCONST(n,v) (lua_pushliteral(L, n), lua_pushstring(L, v), lua_settable(L, -3))
+
+
 int luaopen_saml(lua_State* L) {
 #if (LUA_VERSION_NUM >= 502)
   luaL_newlib(L, saml_funcs);
 #else
   luaL_register(L, "saml", saml_funcs);
 #endif
+  SETCONST("XMLNS_ASSERTION", SAML_XMLNS_ASSERTION);
+  SETCONST("XMLNS_PROTOCOL", SAML_XMLNS_PROTOCOL);
+
+  SETCONST("BINDING_HTTP_POST", SAML_BINDING_HTTP_POST);
+  SETCONST("BINDING_HTTP_REDIRECT", SAML_BINDING_HTTP_REDIRECT);
+
+  SETCONST("STATUS_SUCCESS", SAML_STATUS_SUCCESS);
+  SETCONST("STATUS_REQUESTER", SAML_STATUS_REQUESTER);
+  SETCONST("STATUS_RESPONDER", SAML_STATUS_RESPONDER);
+  SETCONST("STATUS_VERSION_MISMATCH", SAML_STATUS_VERSION_MISMATCH);
   return 1;
 }

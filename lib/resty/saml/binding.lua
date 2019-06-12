@@ -2,10 +2,8 @@
 Functions for creating or parsing SAML bindings
 ]]
 
+local saml = require "saml"
 local zlib = require "zlib"
-
-local constants = require "resty.saml.constants"
-local saml      = require "saml"
 
 local _M = {}
 
@@ -77,7 +75,6 @@ Create a redirect binding
 @treturn ?string signature
 @treturn ?string error
 @see saml.sign_binary
-@see constants:SIGNATURE_ALGORITHMS
 ]]
 function _M.create_redirect(key, params)
   local saml_type

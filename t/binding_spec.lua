@@ -2,7 +2,7 @@ local mime  = require "mime"
 local utils = require "utils"
 
 describe("binding", function()
-  local binding, constants, saml
+  local binding, saml
 
   local redirect_signature = ""
 
@@ -19,8 +19,7 @@ describe("binding", function()
     }
     package.loaded["saml"] = saml
 
-    binding   = require "resty.saml.binding"
-    constants = require "resty.saml.constants"
+    binding = require "resty.saml.binding"
 
     _G.ngx = {
       encode_base64 = function(x) return mime.b64(x) end,

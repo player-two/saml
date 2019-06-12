@@ -24,8 +24,16 @@ static const char* XSD_MAIN = "data/xsd/saml-schema-protocol-2.0.xsd";
 static xmlXPathCompExpr *XPATH_ATTRIBUTES, *XPATH_SESSION_INDEX;
 static xmlSchemaValidCtxt* XML_SCHEMA_VALIDATE_CTX;
 
-const xmlChar* XMLNS_ASSERTION = (xmlChar*)"urn:oasis:names:tc:SAML:2.0:assertion";
-const xmlChar* XMLNS_PROTOCOL = (xmlChar*)"urn:oasis:names:tc:SAML:2.0:protocol";
+const char* SAML_XMLNS_ASSERTION = "urn:oasis:names:tc:SAML:2.0:assertion";
+const char* SAML_XMLNS_PROTOCOL = "urn:oasis:names:tc:SAML:2.0:protocol";
+
+const char* SAML_BINDING_HTTP_POST = "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST";
+const char* SAML_BINDING_HTTP_REDIRECT = "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect";
+
+const char* SAML_STATUS_SUCCESS = "urn:oasis:names:tc:SAML:2.0:status:Success";
+const char* SAML_STATUS_REQUESTER = "urn:oasis:names:tc:SAML:2.0:status:Requester";
+const char* SAML_STATUS_RESPONDER = "urn:oasis:names:tc:SAML:2.0:status:Responder";
+const char* SAML_STATUS_VERSION_MISMATCH = "urn:oasis:names:tc:SAML:2.0:status:VersionMismatch";
 
 static int DEBUG_ENABLED = 1;
 static void ingoreGenericError(void* ctx, const char* msg, ...) {};
@@ -130,12 +138,12 @@ static xmlXPathObject* eval_xpath(xmlDoc* doc, xmlXPathCompExpr* xpath) {
     return NULL;
   }
 
-  if (xmlXPathRegisterNs(ctx, (xmlChar*)"saml", XMLNS_ASSERTION) < 0) {
+  if (xmlXPathRegisterNs(ctx, (xmlChar*)"saml", (xmlChar*)SAML_XMLNS_ASSERTION) < 0) {
     xmlXPathFreeContext(ctx);
     return NULL;
   }
 
-  if (xmlXPathRegisterNs(ctx, (xmlChar*)"samlp", XMLNS_PROTOCOL) < 0) {
+  if (xmlXPathRegisterNs(ctx, (xmlChar*)"samlp", (xmlChar*)SAML_XMLNS_PROTOCOL) < 0) {
     xmlXPathFreeContext(ctx);
     return NULL;
   }

@@ -3,12 +3,10 @@ local url   = require "socket.url"
 local utils = require "utils"
 
 describe("saml integration", function()
-  local constants
   local key_text, cert_text, response
 
   setup(function()
-    constants = require "resty.saml.constants"
-    saml      = require "saml"
+    saml = require "saml"
 
     local err = saml.init({ rock_dir=assert(os.getenv("ROCK_DIR")) })
     if err then print(err) assert(nil) end
@@ -71,10 +69,10 @@ describe("saml integration", function()
 
     setup(function()
       key = assert(saml.load_key(key_text))
-      local transform_id = assert(saml.find_transform_by_href(constants.SIGNATURE_ALGORITHMS.RSA_SHA512))
+      local transform_id = assert(saml.find_transform_by_href(utils.xmlSecHrefRsaSha512))
       signed = assert(saml.sign_xml(key, transform_id, response, {
         id_attr = "ID",
-        insert_after = { constants.XMLNS.ASSERTION, "Issuer", },
+        insert_after = { saml.XMLNS_ASSERTION, "Issuer", },
       }))
     end)
 
