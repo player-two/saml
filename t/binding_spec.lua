@@ -1,4 +1,3 @@
-local mime  = require "mime"
 local utils = require "utils"
 
 describe("binding", function()
@@ -53,7 +52,7 @@ describe("binding", function()
       binding.create_redirect("key", { SigAlg = "alg", SAMLRequest = "xml", RelayState = "relay_state" })
       assert.spy(saml.sign_binary).was.called_with("key", "alg", match._)
       local args = saml.sign_binary.calls[1].vals
-      assert.are.equal("SAMLRequest=eJxLdTcsBgADQgFR&RelayState=relay_state&SigAlg=alg", args[3])
+      assert.are.equal("SAMLRequest=q8jNAQA%3D&RelayState=relay_state&SigAlg=alg", args[3])
     end)
 
     it("errors for signature failure", function()
@@ -67,7 +66,7 @@ describe("binding", function()
       saml.sign_binary.returns("signature", nil)
       local query_string, err = binding.create_redirect("key", { SigAlg = "alg", SAMLRequest = "xml", RelayState = "relay_state" })
       assert.is_nil(err)
-      assert.are.equal("SAMLRequest=eJxLdTcsBgADQgFR&RelayState=relay_state&SigAlg=alg&Signature=c2lnbmF0dXJl", query_string)
+      assert.are.equal("SAMLRequest=q8jNAQA%3D&RelayState=relay_state&SigAlg=alg&Signature=c2lnbmF0dXJl", query_string)
     end)
 
   end)
@@ -79,21 +78,21 @@ describe("binding", function()
     local parsed = "parsed document"
     local default_args = {
       SigAlg = "alg",
-      SAMLRequest = "eJxLdTcsBgADQgFR",
+      SAMLRequest = "q8jNAQA=",
       RelayState = "relay_state",
       Signature = "c2lnbmF0dXJl",
     }
 
     before_each(function()
-      _G.ngx.req.get_method.returns("GET")
-      _G.ngx.req.get_uri_args.returns(default_args)
+      ngx.req.get_method.returns("GET")
+      ngx.req.get_uri_args.returns(default_args)
       saml.verify_binary.returns(true, nil)
       saml.parse.returns(parsed)
-      saml.validate_doc.returns(nil)
+      saml.validate_doc.returns(true)
     end)
 
     it("errors for non-GET method", function()
-      _G.ngx.req.get_method.returns("POST")
+      ngx.req.get_method.returns("POST")
       local doc, args, err = binding.parse_redirect("SAMLRequest", cb_error)
       assert.are.equal("method not allowed", err)
       assert.is_nil(doc)
@@ -101,7 +100,7 @@ describe("binding", function()
     end)
 
     it("errors for missing content", function()
-      _G.ngx.req.get_uri_args.returns({})
+      ngx.req.get_uri_args.returns({})
       local doc, args, err = binding.parse_redirect("SAMLRequest", cb_error)
       assert.are.equal("no SAMLRequest", err)
       assert.is_nil(doc)
@@ -117,9 +116,9 @@ describe("binding", function()
     end)
 
     it("errors for invalid document", function()
-      saml.validate_doc.returns("invalid")
+      saml.validate_doc.returns(false)
       local doc, args, err = binding.parse_redirect("SAMLRequest", cb_error)
-      assert.are.equal("invalid", err)
+      assert.are.equal("document does not validate against schema", err)
       assert.are.equal(parsed, doc)
       assert.are.same(default_args, args)
     end)
@@ -137,7 +136,7 @@ describe("binding", function()
       local args = saml.verify_binary.calls[1].vals
       assert.are.equal(args[1], "-----BEGIN CERTIFICATE-----")
       assert.are.equal(args[2], "alg")
-      assert.are.equal(args[3], "SAMLRequest=eJxLdTcsBgADQgFR&RelayState=relay_state&SigAlg=alg")
+      assert.are.equal(args[3], "SAMLRequest=q8jNAQA%3D&RelayState=relay_state&SigAlg=alg")
       assert.are.equal(args[4], "signature")
     end)
 
@@ -172,12 +171,12 @@ describe("binding", function()
 
     it("signs a request", function()
       binding.create_post("key", "alg", "dest", { SAMLRequest = "request" })
-      assert.spy(saml.sign_xml).was.called_with("key", "alg", "request")
+      assert.spy(saml.sign_xml).was.called_with("key", "alg", "request", match.is_table())
     end)
 
     it("signs a response", function()
       binding.create_post("key", "alg", "dest", { SAMLResponse = "response" })
-      assert.spy(saml.sign_xml).was.called_with("key", "alg", "response")
+      assert.spy(saml.sign_xml).was.called_with("key", "alg", "response", match.is_table())
     end)
 
     it("aborts without a request or response", function()
@@ -224,24 +223,24 @@ describe("binding", function()
 
 
   describe(".parse_post()", function()
-    local cb = function(doc) return "-----BEGIN CERTIFICATE-----" end
-    local cb_error = function(doc) return nil end
     local input_doc = "<Response>"
     local parsed = "parsed document"
     local mngr = { cert = "" }
+    local cb = function(doc) return mngr end
+    local cb_error = function(doc) return nil end
     local default_args = { SAMLRequest = "PFJlc3BvbnNlPg==" }
 
     before_each(function()
-      _G.ngx.req.get_method.returns("POST")
-      _G.ngx.req.get_post_args.returns(default_args, nil)
+      ngx.req.get_method.returns("POST")
+      ngx.req.get_post_args.returns(default_args, nil)
       saml.create_keys_manager.returns(mngr)
       saml.verify_doc.returns(true, nil)
       saml.parse.returns(parsed)
-      saml.validate_doc.returns(nil)
+      saml.validate_doc.returns(true)
     end)
 
     it("errors for non-POST method", function()
-      _G.ngx.req.get_method.returns("GET")
+      ngx.req.get_method.returns("GET")
       local doc, args, err = binding.parse_post("SAMLRequest", cb_error)
       assert.are.equal("method not allowed", err)
       assert.is_nil(doc)
@@ -249,7 +248,7 @@ describe("binding", function()
     end)
 
     it("errors for argument retrieval", function()
-      _G.ngx.req.get_post_args.returns(nil, "bad request body")
+      ngx.req.get_post_args.returns(nil, "bad request body")
       local doc, args, err = binding.parse_post("SAMLRequest", cb_error)
       assert.are.equal("bad request body", err)
       assert.is_nil(doc)
@@ -257,7 +256,7 @@ describe("binding", function()
     end)
 
     it("errors for missing content", function()
-      _G.ngx.req.get_post_args.returns({}, nil)
+      ngx.req.get_post_args.returns({}, nil)
       local doc, args, err = binding.parse_post("SAMLRequest", cb_error)
       assert.are.equal("no SAMLRequest", err)
       assert.is_nil(doc)
@@ -274,15 +273,15 @@ describe("binding", function()
     end)
 
     it("errors for invalid document", function()
-      saml.validate_doc.returns("invalid")
+      saml.validate_doc.returns(false)
       local doc, args, err = binding.parse_post("SAMLRequest", cb_error)
-      assert.are.equal("invalid", err)
+      assert.are.equal("document does not validate against schema", err)
       assert.are.equal(parsed, doc)
     end)
 
     it("errors when no cert is found", function()
       local doc, args, err = binding.parse_post("SAMLRequest", cb_error)
-      assert.are.equal("no cert", err)
+      assert.are.equal("no key manager", err)
       assert.are.equal(parsed, doc)
     end)
 

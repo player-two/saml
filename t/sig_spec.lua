@@ -1,4 +1,3 @@
-local mime  = require "mime"
 local utils = require "utils"
 
 describe("sig", function()
@@ -29,13 +28,13 @@ describe("sig", function()
     it("generates correct bytes using rsa-sha256", function()
       local result, err = saml.sign_binary(key, transform_sha256, binary_data)
       assert.is_nil(err)
-      assert.are.equal(mime.b64(result), binary_signature_rsa_sha256)
+      assert.are.equal(ngx.encode_base64(result), binary_signature_rsa_sha256)
     end)
 
     it("generates correct bytes using rsa-sha512", function()
       local result, err = saml.sign_binary(key, transform_sha512, binary_data)
       assert.is_nil(err)
-      assert.are.equal(mime.b64(result), binary_signature_rsa_sha512)
+      assert.are.equal(ngx.encode_base64(result), binary_signature_rsa_sha512)
     end)
 
   end)
@@ -85,13 +84,13 @@ describe("sig", function()
     end)
 
     it("verifies correctly signed content using rsa-sha256", function()
-      local valid, err = saml.verify_binary(cert, transform_sha256, binary_data, mime.unb64(binary_signature_rsa_sha256))
+      local valid, err = saml.verify_binary(cert, transform_sha256, binary_data, ngx.decode_base64(binary_signature_rsa_sha256))
       assert.is_nil(err)
       assert.is_true(valid)
     end)
 
     it("verifies correctly signed content using rsa-sha512", function()
-      local valid, err = saml.verify_binary(cert, transform_sha512, binary_data, mime.unb64(binary_signature_rsa_sha512))
+      local valid, err = saml.verify_binary(cert, transform_sha512, binary_data, ngx.decode_base64(binary_signature_rsa_sha512))
       assert.is_nil(err)
       assert.is_true(valid)
     end)
