@@ -147,6 +147,29 @@ static int validate_doc(lua_State* L) {
 }
 
 
+static int id(lua_State* L) {
+  lua_settop(L, 1);
+  xmlDoc* doc = (xmlDoc*)lua_touserdata(L, 1);
+  luaL_argcheck(L, doc != NULL, 1, "`xmlDoc*' expected");
+  lua_pop(L, 1);
+
+  xmlNode* root = xmlDocGetRootElement(doc);
+  if (root == NULL) {
+    lua_pushnil(L);
+    return 1;
+  }
+
+  xmlChar* id = xmlGetProp(root, (xmlChar*)"ID");
+  if (id == NULL) {
+    lua_pushnil(L);
+  } else {
+    lua_pushstring(L, (char*)id);
+    xmlFree(id);
+  }
+  return 1;
+}
+
+
 /***
 Get the text of the issuer node
 @function issuer
@@ -701,6 +724,7 @@ static const struct luaL_Reg saml_funcs[] = {
   {"free_doc", free_doc},
   {"validate_doc", validate_doc},
 
+  {"id", id},
   {"issuer", issuer},
   {"session_index", session_index},
   {"attrs", attrs},
