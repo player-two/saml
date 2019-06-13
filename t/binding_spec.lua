@@ -21,31 +21,28 @@ describe("binding", function()
 
     binding = require "resty.saml.binding"
 
-    _G.ngx = {
-      encode_base64 = function(x) return mime.b64(x) end,
-      decode_base64 = function(x) return mime.unb64(x) end,
-      escape_uri = function(x) return x end,
-      req = {
-        get_method = stub(),
-        get_post_args = stub(),
-        get_uri_args = stub(),
-        read_body = stub(),
-      },
-    }
+    stub(ngx.req, "get_method")
+    stub(ngx.req, "get_post_args")
+    stub(ngx.req, "get_uri_args")
+    stub(ngx.req, "read_body")
   end)
 
   teardown(function()
     package.loaded["saml"] = nil
-    _G.ngx = nil
+    ngx.req.get_method:revert()
+    ngx.req.get_post_args:revert()
+    ngx.req.get_uri_args:revert()
+    ngx.req.read_body:revert()
   end)
 
   before_each(function()
     for _, m in pairs(saml) do
       m:clear()
     end
-    for _, m in pairs(_G.ngx.req) do
-      m:clear()
-    end
+    ngx.req.get_method:clear()
+    ngx.req.get_post_args:clear()
+    ngx.req.get_uri_args:clear()
+    ngx.req.read_body:clear()
   end)
 
 

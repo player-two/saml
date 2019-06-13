@@ -19,4 +19,4 @@ docker run --rm -it \
   -w /t \
   -e ROCK_DIR=$OPENRESTY_HOME/luajit/lib/luarocks/rocks/lua-resty-saml/dev-1/ \
   resty-saml-test:latest \
-  bash -c "cd /tmp && luarocks make && cd /t && busted -lpath /usr/local/openresty/lualib/?.lua -cpath /usr/local/openresty/lualib/?.so $args"
+  bash -c "cd /tmp && luarocks make && cd /t && busted --lua=/usr/local/openresty/bin/resty -lpath /usr/local/openresty/lualib/?.lua -cpath /usr/local/openresty/lualib/?.so $args"
