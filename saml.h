@@ -43,7 +43,7 @@ int saml_doc_validate(xmlDoc* doc);
 xmlChar* saml_doc_issuer(xmlDoc* doc);
 xmlChar* saml_doc_session_index(xmlDoc* doc);
 int saml_doc_attrs(xmlDoc* doc, saml_attr_t** attrs, size_t* attrs_len);
-void saml_free_attrs(saml_attr_t* attrs, size_t attrs_len);
+void saml_attrs_free(saml_attr_t* attrs, size_t attrs_len);
 
 xmlSecTransformCtx* saml_sign_binary(xmlSecKey* key, xmlSecTransformId transform_id, unsigned char* data, size_t data_len);
 int saml_verify_binary(xmlSecKey* cert, xmlSecTransformId transform_id, unsigned char* data, size_t data_len, unsigned char* sig, size_t sig_len);

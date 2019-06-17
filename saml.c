@@ -247,7 +247,7 @@ int saml_doc_attrs(xmlDoc* doc, saml_attr_t** attrs, size_t* attrs_len) {
 }
 
 
-void saml_free_attrs(saml_attr_t* attrs, size_t attrs_len) {
+void saml_attrs_free(saml_attr_t* attrs, size_t attrs_len) {
   for (int i = 0; i < attrs_len; i++) {
     if (attrs[i].name != NULL) {
       xmlFree(attrs[i].name);

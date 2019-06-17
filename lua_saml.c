@@ -13,11 +13,10 @@
 
 
 /***
-Initialize the libxml2 parser and xmlsec
+Initialize the libxml2 parser and xmlsec; see @{01-Installation.md}
 @function init
-@tparam[opt={}] table options
+@tparam table options
 @treturn ?string
-@usage local err = saml.init({ debug = true })
 */
 static int init(lua_State* L) {
   lua_settop(L, 1);
@@ -41,7 +40,7 @@ static int init(lua_State* L) {
 
 
 /***
-Deinitialize libxml2 and xmlsec
+Deinitialize libxml2 and xmlsec; see @{01-Installation.md}
 @function shutdown
 */
 static int shutdown(lua_State* L) {
@@ -54,7 +53,7 @@ static int shutdown(lua_State* L) {
 Parse xml text into a libxml2 document
 @function doc_read_memory
 @tparam string str
-@treturn ?xmlDocPtr doc
+@treturn ?xmlDoc* doc
 */
 static int doc_read_memory(lua_State* L) {
   lua_settop(L, 1);
@@ -76,7 +75,7 @@ static int doc_read_memory(lua_State* L) {
 Read a file with xml text and parse its contents into a libxml2 document
 @function doc_read_file
 @tparam string name
-@treturn ?xmlDocPtr doc
+@treturn ?xmlDoc* doc
 */
 static int doc_read_file(lua_State* L) {
   lua_settop(L, 1);
@@ -96,7 +95,7 @@ static int doc_read_file(lua_State* L) {
 /***
 Convert a libxml2 document into a string
 @function doc_serialize
-@tparam xmlDocPtr doc
+@tparam xmlDoc* doc
 @treturn string name
 */
 static int doc_serialize(lua_State* L) {
@@ -118,7 +117,7 @@ static int doc_serialize(lua_State* L) {
 Free the memory of a libxml2 document
 The return value of `doc_read_memory` and `doc_read_file` should be freed
 @function doc_free
-@tparam xmlDocPtr doc
+@tparam xmlDoc* doc
 */
 static int doc_free(lua_State* L) {
   lua_settop(L, 1);
@@ -134,7 +133,7 @@ static int doc_free(lua_State* L) {
 /***
 Determine if the libxml2 document is valid according to the SAML XSD
 @function doc_validate
-@tparam xmlDocPtr doc
+@tparam xmlDoc* doc
 @treturn ?string error
 */
 static int doc_validate(lua_State* L) {
@@ -150,7 +149,7 @@ static int doc_validate(lua_State* L) {
 /***
 Get the ID of the root element in the document
 @function doc_validate
-@tparam xmlDocPtr doc
+@tparam xmlDoc* doc
 @treturn ?string error
 */
 static int doc_id(lua_State* L) {
@@ -179,7 +178,7 @@ static int doc_id(lua_State* L) {
 /***
 Get the text of the issuer node
 @function doc_issuer
-@tparam xmlDocPtr doc
+@tparam xmlDoc* doc
 @treturn ?string issuer
 */
 static int doc_issuer(lua_State* L) {
@@ -202,7 +201,7 @@ static int doc_issuer(lua_State* L) {
 /***
 Get the value of the AuthnStatement[SessionIndex] attribute in the document
 @function doc_session_index
-@tparam xmlDocPtr doc
+@tparam xmlDoc* doc
 @treturn ?string session_index
 */
 static int doc_session_index(lua_State* L) {
@@ -225,7 +224,7 @@ static int doc_session_index(lua_State* L) {
 /***
 Get the map of attributes in the document's assertion
 @function doc_attrs
-@tparam xmlDocPtr doc
+@tparam xmlDoc* doc
 @treturn table attributes
 */
 static int doc_attrs(lua_State* L) {
@@ -272,7 +271,7 @@ static int doc_attrs(lua_State* L) {
       lua_settable(L, -3);
     }
   }
-  saml_free_attrs(attrs, attrs_len);
+  saml_attrs_free(attrs, attrs_len);
   return 1;
 }
 
@@ -288,8 +287,8 @@ static int get_key_format(lua_State* L, int narg) {
 Load a private key from memory
 @function key_read_memory
 @string data private key data
-@xmlSecKeyDataFormat key format
-@treturn xmlSecKeyPtr
+@tparam xmlSecKeyDataFormat key format
+@treturn xmlSecKey*
 */
 static int key_read_memory(lua_State* L) {
   lua_settop(L, 2);
@@ -313,8 +312,8 @@ static int key_read_memory(lua_State* L) {
 Load a private key from a file
 @function key_read_file
 @string file path to private key file
-@xmlSecKeyDataFormat key format
-@treturn xmlSecKeyPtr
+@tparam xmlSecKeyDataFormat key format
+@treturn xmlSecKey*
 */
 static int key_read_file(lua_State* L) {
   lua_settop(L, 2);
@@ -336,9 +335,9 @@ static int key_read_file(lua_State* L) {
 /***
 Add a public key from memory to a private key
 @function key_add_cert_memory
-@tparam xmlSecKeyPtr key
+@tparam xmlSecKey* key
 @tparam string data public key data
-@xmlSecKeyDataFormat key format
+@tparam xmlSecKeyDataFormat key format
 @treturn bool success
 */
 static int key_add_cert_memory(lua_State* L) {
@@ -364,9 +363,9 @@ static int key_add_cert_memory(lua_State* L) {
 /***
 Add a public key from a file to a private key
 @function key_add_cert_file
-@tparam xmlSecKeyPtr key
+@tparam xmlSecKey* key
 @tparam string file path to public key data
-@xmlSecKeyDataFormat key format
+@tparam xmlSecKeyDataFormat key format
 @treturn bool success
 */
 static int key_add_cert_file(lua_State* L) {
@@ -391,8 +390,8 @@ static int key_add_cert_file(lua_State* L) {
 /***
 Create a keys manager with zero or more keys
 @function create_keys_manager
-@tparam {xmlSecKeyPtr,...} keys
-@treturn ?xmlSecKeysMngrPtr
+@tparam {xmlSecKey*,...} keys
+@treturn ?xmlSecKeysMngr*
 @treturn ?string error
 @usage
 local cert = saml.cert_read_file("/path/to/cert.pem")
@@ -466,7 +465,7 @@ static int find_transform_by_href(lua_State* L) {
 /***
 Calculate a signature for a string
 @function sign_binary
-@tparam xmlSecKeyPtr key
+@tparam xmlSecKey* key
 @tparam xmlSecTransformId transform_id
 @tparam string data
 @treturn ?string signature
@@ -537,9 +536,9 @@ int sign_get_opts(lua_State* L, int i, saml_doc_opts_t* opts) {
 /***
 Sign an XML document (mutates the input)
 @function sign_doc
-@tparam xmlSecKeyPtr key
+@tparam xmlSecKey* key
 @tparam string xmlSecTransformId transform_id
-@tparam xmlDocPtr doc
+@tparam xmlDoc* doc
 @tparam[opt={}] table options
 @treturn ?string error
 */
@@ -572,7 +571,7 @@ static int sign_doc(lua_State* L) {
 /***
 Sign an XML string
 @function sign_xml
-@tparam xmlSecKeyPtr key
+@tparam xmlSecKey* key
 @tparam string xmlSecTransformId transform_id
 @tparam string str
 @tparam[opt={}] table options
@@ -622,7 +621,7 @@ static int sign_xml(lua_State* L) {
 /***
 Verify a signature for a string
 @function verify_binary
-@tparam xmlSecKeyPtr cert
+@tparam xmlSecKey* cert
 @tparam string xmlSecTransformId transform_id
 @tparam string data
 @tparam string signature
@@ -661,8 +660,8 @@ static int verify_binary(lua_State* L) {
 /***
 Verify that a XML document has been signed with the key corresponding to a cert
 @function verify_doc
-@tparam xmlSecKeysMngrPtr mngr
-@tparam xmlDocPtr doc
+@tparam xmlSecKeysMngr* mngr
+@tparam xmlDoc* doc
 @tparam[opt={}] table options
 @treturn bool valid
 @treturn ?string error

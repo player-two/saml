@@ -62,7 +62,7 @@ end
 
 --[[---
 Create a redirect binding
-@tparam xmlSecKeyPtr key
+@tparam xmlSecKey* key
 @tparam table params
 @treturn ?string signature
 @treturn ?string error
@@ -100,7 +100,7 @@ end
 Parse a redirect binding
 @tparam string saml_type either SAMLRequest or SAMLResponse
 @tparam func cert_from_doc determine the signing public key from the document
-@treturn ?xmlDocPtr doc
+@treturn ?xmlDoc* doc
 @treturn ?table args
 @treturn ?string error
 @see saml.verify_binary
@@ -149,7 +149,7 @@ end
 
 --[[---
 Create a post binding
-@tparam xmlSecKeyPtr key
+@tparam xmlSecKey* key
 @tparam xmlSecTransformId transform_id
 @tparam string destination
 @tparam table params
@@ -181,7 +181,7 @@ end
 Parse a post binding
 @tparam string saml_type either SAMLRequest or SAMLResponse
 @tparam func key_mngr_from_doc determine the signing public key from the document
-@treturn ?xmlDocPtr doc
+@treturn ?xmlDoc* doc
 @treturn ?table args
 @treturn ?string error
 @see saml.verify_doc
