@@ -1,5 +1,6 @@
-title = "lua-resty-saml"
-description = "lua-resty-saml: an OpenResty plugin for Single Sign-On via SAML"
+project = "lua-resty-saml"
+title = "lua-resty-saml documentation"
+description = "An OpenResty plugin for Single Sign-On via SAML"
 full_description = [[
 Welcome to the documentation for lua-resty-saml!  See @{00-Introduction.md} to get started.
 ]]
@@ -7,6 +8,7 @@ Welcome to the documentation for lua-resty-saml!  See @{00-Introduction.md} to g
 dir = "../out"
 
 format = "markdown"
+style = "!pale"
 
 topics = {
   "00-Introduction.md",
