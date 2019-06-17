@@ -27,13 +27,13 @@ describe("saml integration", function()
     local doc, mngr
 
     setup(function()
-      local cert = saml.load_cert(cert_text)
+      local cert = saml.key_read_memory(cert_text, saml.KeyDataFormatCertPem)
       mngr = saml.create_keys_manager({ cert })
     end)
 
     after_each(function()
       if doc ~= nil then
-        saml.free_doc(doc)
+        saml.doc_free(doc)
       end
     end)
 
@@ -50,7 +50,7 @@ describe("saml integration", function()
       local result = body:match('id="xml_signed"[^>]*>(.+)</textarea>')
       assert.is_not_nil(result)
 
-      doc = assert(saml.parse(utils.html_entity_decode(result)))
+      doc = assert(saml.doc_read_memory(utils.html_entity_decode(result)))
       local valid, err = saml.verify_doc(mngr, doc, { id_attr = "ID" })
       assert.is_nil(err)
       assert.is_true(valid)
@@ -63,7 +63,7 @@ describe("saml integration", function()
       assert.are.equal(result_type, "exit")
       assert.are.equal(result_code, 0)
 
-      doc = assert(saml.parse(assert(utils.readfile(name))))
+      doc = assert(saml.doc_read_memory(assert(utils.readfile(name))))
       local valid, err = saml.verify_doc(mngr, doc, { id_attr = "ID" })
       assert.is_nil(err)
       assert.is_true(valid)
@@ -75,7 +75,7 @@ describe("saml integration", function()
     local key, cert, signed
 
     setup(function()
-      key = assert(saml.load_key(key_text))
+      key = assert(saml.key_read_memory(key_text, saml.KeyDataFormatPem))
       local transform_id = assert(saml.find_transform_by_href(utils.xmlSecHrefRsaSha512))
       signed = assert(saml.sign_xml(key, transform_id, response, {
         id_attr = "ID",
@@ -123,7 +123,7 @@ describe("saml integration", function()
     setup(function()
       binding = require "resty.saml.binding"
 
-      local key = assert(saml.load_key(key_text))
+      local key = assert(saml.key_read_memory(key_text, saml.KeyDataFormatPem))
       local authn_request = assert(utils.readfile("/t/data/authn_request.xml"))
       local query_string = assert(binding.create_redirect(key, {
         SigAlg = "http://www.w3.org/2001/04/xmldsig-more#rsa-sha512",

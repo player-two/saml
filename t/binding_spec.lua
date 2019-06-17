@@ -8,8 +8,8 @@ describe("binding", function()
   setup(function()
     saml = {
       find_transform_by_href  = stub().returns("alg"),
-      parse                   = stub(),
-      validate_doc            = stub(),
+      doc_read_memory         = stub(),
+      doc_validate            = stub(),
       create_keys_manager     = stub(),
       sign_binary             = stub(),
       verify_binary           = stub(),
@@ -87,8 +87,8 @@ describe("binding", function()
       ngx.req.get_method.returns("GET")
       ngx.req.get_uri_args.returns(default_args)
       saml.verify_binary.returns(true, nil)
-      saml.parse.returns(parsed)
-      saml.validate_doc.returns(true)
+      saml.doc_read_memory.returns(parsed)
+      saml.doc_validate.returns(true)
     end)
 
     it("errors for non-GET method", function()
@@ -108,7 +108,7 @@ describe("binding", function()
     end)
 
     it("errors for invalid xml", function()
-      saml.parse.returns(nil)
+      saml.doc_read_memory.returns(nil)
       local doc, args, err = binding.parse_redirect("SAMLRequest", cb_error)
       assert.are.equal("SAMLRequest is not valid xml", err)
       assert.is_nil(doc)
@@ -116,7 +116,7 @@ describe("binding", function()
     end)
 
     it("errors for invalid document", function()
-      saml.validate_doc.returns(false)
+      saml.doc_validate.returns(false)
       local doc, args, err = binding.parse_redirect("SAMLRequest", cb_error)
       assert.are.equal("document does not validate against schema", err)
       assert.are.equal(parsed, doc)
@@ -235,8 +235,8 @@ describe("binding", function()
       ngx.req.get_post_args.returns(default_args, nil)
       saml.create_keys_manager.returns(mngr)
       saml.verify_doc.returns(true, nil)
-      saml.parse.returns(parsed)
-      saml.validate_doc.returns(true)
+      saml.doc_read_memory.returns(parsed)
+      saml.doc_validate.returns(true)
     end)
 
     it("errors for non-POST method", function()
@@ -264,16 +264,16 @@ describe("binding", function()
     end)
 
     it("errors for invalid xml", function()
-      saml.parse.returns(nil)
+      saml.doc_read_memory.returns(nil)
       local doc, args, err = binding.parse_post("SAMLRequest", cb_error)
-      assert.spy(saml.parse).was.called_with("<Response>")
+      assert.spy(saml.doc_read_memory).was.called_with("<Response>")
       assert.are.equal("SAMLRequest is not valid xml", err)
       assert.is_nil(doc)
       assert.are.same(default_args, args)
     end)
 
     it("errors for invalid document", function()
-      saml.validate_doc.returns(false)
+      saml.doc_validate.returns(false)
       local doc, args, err = binding.parse_post("SAMLRequest", cb_error)
       assert.are.equal("document does not validate against schema", err)
       assert.are.equal(parsed, doc)

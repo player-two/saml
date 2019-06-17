@@ -52,11 +52,11 @@ static int shutdown(lua_State* L) {
 
 /***
 Parse xml text into a libxml2 document
-@function parse
+@function doc_read_memory
 @tparam string str
 @treturn ?xmlDocPtr doc
 */
-static int parse(lua_State* L) {
+static int doc_read_memory(lua_State* L) {
   lua_settop(L, 1);
   size_t buf_len;
   const char* buf = luaL_checklstring(L, 1, &buf_len);
@@ -74,11 +74,11 @@ static int parse(lua_State* L) {
 
 /***
 Read a file with xml text and parse its contents into a libxml2 document
-@function parse_file
+@function doc_read_file
 @tparam string name
 @treturn ?xmlDocPtr doc
 */
-static int parse_file(lua_State* L) {
+static int doc_read_file(lua_State* L) {
   lua_settop(L, 1);
   const char* filename = luaL_checklstring(L, 1, NULL);
   lua_pop(L, 1);
@@ -95,11 +95,11 @@ static int parse_file(lua_State* L) {
 
 /***
 Convert a libxml2 document into a string
-@function serialize
+@function doc_serialize
 @tparam xmlDocPtr doc
 @treturn string name
 */
-static int serialize(lua_State* L) {
+static int doc_serialize(lua_State* L) {
   lua_settop(L, 1);
   xmlDoc* doc = (xmlDoc*)lua_touserdata(L, 1);
   luaL_argcheck(L, doc != NULL, 1, "`xmlDoc*' expected");
@@ -116,11 +116,11 @@ static int serialize(lua_State* L) {
 
 /***
 Free the memory of a libxml2 document
-The return value of `parse` and `parse_file` should be freed
-@function free_doc
+The return value of `doc_read_memory` and `doc_read_file` should be freed
+@function doc_free
 @tparam xmlDocPtr doc
 */
-static int free_doc(lua_State* L) {
+static int doc_free(lua_State* L) {
   lua_settop(L, 1);
   xmlDoc* doc = (xmlDoc*)lua_touserdata(L, 1);
   luaL_argcheck(L, doc != NULL, 1, "`xmlDoc*' expected");
@@ -133,11 +133,11 @@ static int free_doc(lua_State* L) {
 
 /***
 Determine if the libxml2 document is valid according to the SAML XSD
-@function validate_doc
+@function doc_validate
 @tparam xmlDocPtr doc
 @treturn ?string error
 */
-static int validate_doc(lua_State* L) {
+static int doc_validate(lua_State* L) {
   lua_settop(L, 1);
   xmlDoc* doc = (xmlDoc*)lua_touserdata(L, 1);
   luaL_argcheck(L, doc != NULL, 1, "`xmlDoc*' expected");
@@ -147,7 +147,13 @@ static int validate_doc(lua_State* L) {
 }
 
 
-static int id(lua_State* L) {
+/***
+Get the ID of the root element in the document
+@function doc_validate
+@tparam xmlDocPtr doc
+@treturn ?string error
+*/
+static int doc_id(lua_State* L) {
   lua_settop(L, 1);
   xmlDoc* doc = (xmlDoc*)lua_touserdata(L, 1);
   luaL_argcheck(L, doc != NULL, 1, "`xmlDoc*' expected");
@@ -172,11 +178,11 @@ static int id(lua_State* L) {
 
 /***
 Get the text of the issuer node
-@function issuer
+@function doc_issuer
 @tparam xmlDocPtr doc
 @treturn ?string issuer
 */
-static int issuer(lua_State* L) {
+static int doc_issuer(lua_State* L) {
   lua_settop(L, 1);
   xmlDoc* doc = (xmlDoc*)lua_touserdata(L, 1);
   luaL_argcheck(L, doc != NULL, 1, "`xmlDoc*' expected");
@@ -195,11 +201,11 @@ static int issuer(lua_State* L) {
 
 /***
 Get the value of the AuthnStatement[SessionIndex] attribute in the document
-@function session_index
+@function doc_session_index
 @tparam xmlDocPtr doc
 @treturn ?string session_index
 */
-static int session_index(lua_State* L) {
+static int doc_session_index(lua_State* L) {
   lua_settop(L, 1);
   xmlDoc* doc = (xmlDoc*)lua_touserdata(L, 1);
   luaL_argcheck(L, doc != NULL, 1, "`xmlDoc*' expected");
@@ -218,11 +224,11 @@ static int session_index(lua_State* L) {
 
 /***
 Get the map of attributes in the document's assertion
-@function attrs
+@function doc_attrs
 @tparam xmlDocPtr doc
 @treturn table attributes
 */
-static int attrs(lua_State* L) {
+static int doc_attrs(lua_State* L) {
   lua_settop(L, 1);
   xmlDoc* doc = (xmlDoc*)lua_touserdata(L, 1);
   luaL_argcheck(L, doc != NULL, 1, "`xmlDoc*' expected");
@@ -271,19 +277,29 @@ static int attrs(lua_State* L) {
 }
 
 
+static int get_key_format(lua_State* L, int narg) {
+  int format = luaL_checkint(L, narg);
+  luaL_argcheck(L, (xmlSecKeyDataFormatUnknown <= format && format <= xmlSecKeyDataFormatCertDer), narg, \
+                "format is not valid");
+  return format;
+}
+
 /***
 Load a private key from memory
-@function load_key
+@function key_read_memory
 @string data private key data
+@xmlSecKeyDataFormat key format
 @treturn xmlSecKeyPtr
 */
-static int load_key(lua_State* L) {
-  lua_settop(L, 1);
+static int key_read_memory(lua_State* L) {
+  lua_settop(L, 2);
   size_t key_len;
   const xmlSecByte* key_data = (xmlSecByte*)luaL_checklstring(L, 1, &key_len);
-  lua_pop(L, 1);
 
-  xmlSecKey* key = xmlSecCryptoAppKeyLoadMemory(key_data, key_len, xmlSecKeyDataFormatPem, NULL, NULL, NULL);
+  int format = get_key_format(L, 2);
+  lua_pop(L, 2);
+
+  xmlSecKey* key = xmlSecCryptoAppKeyLoadMemory(key_data, key_len, format, NULL, NULL, NULL);
   if (key == NULL) {
     lua_pushnil(L);
   } else {
@@ -295,16 +311,19 @@ static int load_key(lua_State* L) {
 
 /***
 Load a private key from a file
-@function load_key_file
+@function key_read_file
 @string file path to private key file
+@xmlSecKeyDataFormat key format
 @treturn xmlSecKeyPtr
 */
-static int load_key_file(lua_State* L) {
-  lua_settop(L, 1);
+static int key_read_file(lua_State* L) {
+  lua_settop(L, 2);
   const char* key_file = luaL_checklstring(L, 1, NULL);
-  lua_pop(L, 1);
 
-  xmlSecKey* key = xmlSecCryptoAppKeyLoad(key_file, xmlSecKeyDataFormatPem, NULL, NULL, NULL);
+  int format = get_key_format(L, 2);
+  lua_pop(L, 2);
+
+  xmlSecKey* key = xmlSecCryptoAppKeyLoad(key_file, format, NULL, NULL, NULL);
   if (key == NULL) {
     lua_pushnil(L);
   } else {
@@ -316,21 +335,24 @@ static int load_key_file(lua_State* L) {
 
 /***
 Add a public key from memory to a private key
-@function key_load_cert
+@function key_add_cert_memory
 @tparam xmlSecKeyPtr key
 @tparam string data public key data
+@xmlSecKeyDataFormat key format
 @treturn bool success
 */
-static int key_load_cert(lua_State* L) {
-  lua_settop(L, 2);
+static int key_add_cert_memory(lua_State* L) {
+  lua_settop(L, 3);
   xmlSecKey* key = (xmlSecKey*)lua_touserdata(L, 1);
   luaL_argcheck(L, key != NULL, 1, "`xmlSecKey*' expected");
 
   size_t cert_len;
   const unsigned char* cert = (unsigned char*)luaL_checklstring(L, 2, &cert_len);
-  lua_pop(L, 2);
 
-  if (xmlSecCryptoAppKeyCertLoadMemory(key, cert, cert_len, xmlSecKeyDataFormatPem) < 0) {
+  int format = get_key_format(L, 3);
+  lua_pop(L, 3);
+
+  if (xmlSecCryptoAppKeyCertLoadMemory(key, cert, cert_len, format) < 0) {
     lua_pushboolean(L, 0);
   } else {
     lua_pushboolean(L, 1);
@@ -341,62 +363,26 @@ static int key_load_cert(lua_State* L) {
 
 /***
 Add a public key from a file to a private key
-@function key_load_cert_file
+@function key_add_cert_file
 @tparam xmlSecKeyPtr key
 @tparam string file path to public key data
+@xmlSecKeyDataFormat key format
 @treturn bool success
 */
-static int key_load_cert_file(lua_State* L) {
-  lua_settop(L, 2);
+static int key_add_cert_file(lua_State* L) {
+  lua_settop(L, 3);
   xmlSecKey* key = (xmlSecKey*)lua_touserdata(L, 1);
   luaL_argcheck(L, key != NULL, 1, "`xmlSecKey*' expected");
 
   const char* cert_file = luaL_checklstring(L, 2, NULL);
-  lua_pop(L, 2);
 
-  if (xmlSecCryptoAppKeyCertLoad(key, cert_file, xmlSecKeyDataFormatPem) < 0) {
+  int format = get_key_format(L, 3);
+  lua_pop(L, 3);
+
+  if (xmlSecCryptoAppKeyCertLoad(key, cert_file, format) < 0) {
     lua_pushboolean(L, 0);
   } else {
     lua_pushboolean(L, 1);
-  }
-  return 1;
-}
-
-
-/***
-Load a public key from memory
-@function load_cert
-@string data public key data
-@treturn xmlSecKeyPtr
-*/
-static int load_cert(lua_State* L) {
-  lua_settop(L, 1);
-  size_t cert_len;
-  const xmlSecByte* cert_data = (xmlSecByte*)luaL_checklstring(L, 1, &cert_len);
-  lua_pop(L, 1);
-
-  xmlSecKey* cert = xmlSecCryptoAppKeyLoadMemory(cert_data, cert_len, xmlSecKeyDataFormatCertPem, NULL, NULL, NULL);
-  lua_pushlightuserdata(L, (void*)cert);
-  return 1;
-}
-
-
-/***
-Load a public key from a file
-@function load_cert_file
-@string file path to public key file
-@treturn xmlSecKeyPtr
-*/
-static int load_cert_file(lua_State* L) {
-  lua_settop(L, 1);
-  const char* cert_file = luaL_checklstring(L, 1, NULL);
-  lua_pop(L, 1);
-
-  xmlSecKey* cert = xmlSecCryptoAppKeyLoad(cert_file, xmlSecKeyDataFormatCertPem, NULL, NULL, NULL);
-  if (cert == NULL) {
-    lua_pushnil(L);
-  } else {
-    lua_pushlightuserdata(L, (void*)cert);
   }
   return 1;
 }
@@ -409,7 +395,7 @@ Create a keys manager with zero or more keys
 @treturn ?xmlSecKeysMngrPtr
 @treturn ?string error
 @usage
-local cert = saml.load_cert_file("/path/to/cert.pem")
+local cert = saml.cert_read_file("/path/to/cert.pem")
 local mngr, err = saml.create_keys_manager({ cert })
 */
 static int create_keys_mngr(lua_State* L) {
@@ -718,23 +704,21 @@ static const struct luaL_Reg saml_funcs[] = {
   {"init", init},
   {"shutdown", shutdown},
 
-  {"parse", parse},
-  {"parse_file", parse_file},
-  {"serialize", serialize},
-  {"free_doc", free_doc},
-  {"validate_doc", validate_doc},
+  {"doc_read_memory", doc_read_memory},
+  {"doc_read_file", doc_read_file},
+  {"doc_serialize", doc_serialize},
+  {"doc_free", doc_free},
+  {"doc_validate", doc_validate},
 
-  {"id", id},
-  {"issuer", issuer},
-  {"session_index", session_index},
-  {"attrs", attrs},
+  {"doc_id", doc_id},
+  {"doc_issuer", doc_issuer},
+  {"doc_session_index", doc_session_index},
+  {"doc_attrs", doc_attrs},
 
-  {"load_key", load_key},
-  {"load_key_file", load_key_file},
-  {"load_cert", load_cert},
-  {"load_cert_file", load_cert_file},
-  {"key_load_cert", key_load_cert},
-  {"key_load_cert_file", key_load_cert_file},
+  {"key_read_memory", key_read_memory},
+  {"key_read_file", key_read_file},
+  {"key_add_cert_memory", key_add_cert_memory},
+  {"key_add_cert_file", key_add_cert_file},
   {"create_keys_manager", create_keys_mngr},
 
   {"find_transform_by_href", find_transform_by_href},
@@ -747,7 +731,8 @@ static const struct luaL_Reg saml_funcs[] = {
 };
 
 
-#define SETCONST(n,v) (lua_pushliteral(L, n), lua_pushstring(L, v), lua_settable(L, -3))
+#define SETCONST(n, v) (lua_pushliteral(L, n), lua_pushstring(L, v), lua_settable(L, -3))
+#define SETENUM(n, v)  (lua_pushliteral(L, n), lua_pushnumber(L, v), lua_settable(L, -3))
 
 
 int luaopen_saml(lua_State* L) {
@@ -766,5 +751,16 @@ int luaopen_saml(lua_State* L) {
   SETCONST("STATUS_REQUESTER", SAML_STATUS_REQUESTER);
   SETCONST("STATUS_RESPONDER", SAML_STATUS_RESPONDER);
   SETCONST("STATUS_VERSION_MISMATCH", SAML_STATUS_VERSION_MISMATCH);
+
+  // export of keysdata.h:xmlSecKeyDataFormat
+  SETENUM("KeyDataFormatUnknown", xmlSecKeyDataFormatUnknown);
+  SETENUM("KeyDataFormatBinary", xmlSecKeyDataFormatBinary);
+  SETENUM("KeyDataFormatPem", xmlSecKeyDataFormatPem);
+  SETENUM("KeyDataFormatDer", xmlSecKeyDataFormatDer);
+  SETENUM("KeyDataFormatPkcs8Pem", xmlSecKeyDataFormatPkcs8Pem);
+  SETENUM("KeyDataFormatPkcs8Der", xmlSecKeyDataFormatPkcs8Der);
+  SETENUM("KeyDataFormatPkcs12", xmlSecKeyDataFormatPkcs12);
+  SETENUM("KeyDataFormatCertPem", xmlSecKeyDataFormatCertPem);
+  SETENUM("KeyDataFormatCertDer", xmlSecKeyDataFormatCertDer);
   return 1;
 }

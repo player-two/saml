@@ -125,10 +125,10 @@ function _M.parse_redirect(saml_type, cert_from_doc)
   local ok, xml_str = pcall(zlib.inflate(_WINDOW_BITS), deflated)
   if not ok then return nil, args, saml_type .. " is not valid compresssion format" end
 
-  local doc = saml.parse(xml_str)
+  local doc = saml.doc_read_memory(xml_str)
   if doc == nil then return nil, args, saml_type .. " is not valid xml" end
 
-  local ok = saml.validate_doc(doc)
+  local ok = saml.doc_validate(doc)
   if not ok then return doc, args, "document does not validate against schema" end
 
   local cert = cert_from_doc(doc)
@@ -199,10 +199,10 @@ function _M.parse_post(saml_type, key_mngr_from_doc)
   local content = ngx.decode_base64(encoded)
   if not content then return nil, args, saml_type .. " is not valid base64" end
 
-  local doc = saml.parse(content)
+  local doc = saml.doc_read_memory(content)
   if doc == nil then return nil, args, saml_type .. " is not valid xml" end
 
-  local ok = saml.validate_doc(doc)
+  local ok = saml.doc_validate(doc)
   if not ok then return doc, args, "document does not validate against schema" end
 
   local mngr = key_mngr_from_doc(doc)

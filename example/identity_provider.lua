@@ -5,19 +5,19 @@ local _M = {}
 
 local RSA_SHA_512_TRANSFORM = assert(saml.find_transform_by_href("http://www.w3.org/2001/04/xmldsig-more#rsa-sha512"))
 
-local SIGNING_KEY = saml.load_key_file("/ssl/idp.key")
-local SIGNING_CERT = saml.load_cert_file("/ssl/idp.crt")
-if not saml.key_load_cert_file(SIGNING_KEY, "/ssl/idp.crt") then
+local SIGNING_KEY = assert(saml.key_read_file("/ssl/idp.key", saml.KeyDataFormatPem))
+local SIGNING_CERT = assert(saml.key_read_file("/ssl/idp.crt", saml.KeyDataFormatCertPem))
+if not saml.key_add_cert_file(SIGNING_KEY, "/ssl/idp.crt", saml.KeyDataFormatCertPem) then
   assert(nil, "could not add cert to signing key")
 end
 
-local SP_CERT = saml.load_cert_file("/ssl/sp.crt")
+local SP_CERT = assert(saml.key_read_file("/ssl/sp.crt", saml.KeyDataFormatCertPem))
 
 local SP_URI = "http://localhost:8088"
 local IDP_URI = "http://localhost:8089"
 
 local function cert_from_doc(doc)
-  local issuer = saml.issuer(doc)
+  local issuer = saml.doc_issuer(doc)
   if issuer == SP_URI then
     return SP_CERT
   else
@@ -79,8 +79,8 @@ function _M:sso(relay_state)
 
   local request_id = ""
   if doc then
-    request_id = saml.id(doc)
-    saml.free_doc(doc)
+    request_id = saml.doc_id(doc)
+    saml.doc_free(doc)
   end
 
   local status
@@ -115,8 +115,8 @@ function _M:sls(relay_state)
 
   local request_id = ""
   if doc then
-    request_id = saml.id(doc)
-    saml.free_doc(doc)
+    request_id = saml.doc_id(doc)
+    saml.doc_free(doc)
   end
 
   local status

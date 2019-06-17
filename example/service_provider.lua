@@ -5,13 +5,13 @@ local _M = {}
 
 local RSA_SHA_512_HREF = "http://www.w3.org/2001/04/xmldsig-more#rsa-sha512"
 
-local SIGNING_KEY = assert(saml.load_key_file("/ssl/sp.key"))
-local SIGNING_CERT = assert(saml.load_cert_file("/ssl/sp.crt"))
-if not saml.key_load_cert_file(SIGNING_KEY, "/ssl/sp.crt") then
+local SIGNING_KEY = assert(saml.key_read_file("/ssl/sp.key", saml.KeyDataFormatPem))
+local SIGNING_CERT = assert(saml.key_read_file("/ssl/sp.crt", saml.KeyDataFormatCertPem))
+if not saml.key_add_cert_file(SIGNING_KEY, "/ssl/sp.crt", saml.KeyDataFormatCertPem) then
   assert(nil, "could not add cert to signing key")
 end
 
-local IDP_CERT = assert(saml.load_cert_file("/ssl/idp.crt"))
+local IDP_CERT = assert(saml.key_read_file("/ssl/idp.crt", saml.KeyDataFormatCertPem))
 local IDP_CERT_MNGR = assert(saml.create_keys_manager({ IDP_CERT }))
 
 local SP_URI = "http://localhost:8088"
@@ -19,7 +19,7 @@ local IDP_URI = "http://localhost:8089"
 local SP_PROVIDER_NAME = "Resty Service Provider"
 
 local function key_mngr_from_doc(doc)
-  local issuer = saml.issuer(doc)
+  local issuer = saml.doc_issuer(doc)
   if issuer == IDP_URI then
     return IDP_CERT_MNGR
   else
@@ -111,15 +111,15 @@ function _M.acs()
   local doc, args, err = saml.binding.parse_post("SAMLResponse", key_mngr_from_doc)
 
   if err then
-    if doc then saml.free_doc(doc) end
+    if doc then saml.doc_free(doc) end
     ngx.log(ngx.WARN, err)
     ngx.exit(ngx.HTTP_BAD_REQUEST)
   end
 
   -- TODO: lookup status
 
-  local attrs = saml.attrs(doc)
-  saml.free_doc(doc)
+  local attrs = saml.doc_attrs(doc)
+  saml.doc_free(doc)
 
   ngx.header["Set-Cookie"] = "username=" .. attrs.username .. ";"
 
@@ -138,8 +138,8 @@ function _M.sls()
 
   local request_id = ""
   if doc then
-    request_id = saml.id(doc)
-    saml.free_doc(doc)
+    request_id = saml.doc_id(doc)
+    saml.doc_free(doc)
   end
 
   local status
