@@ -1,0 +1,134 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+<head>
+    <title>lua-resty-saml</title>
+    <link rel="stylesheet" href="../ldoc.css" type="text/css" />
+</head>
+<body>
+
+<div id="container">
+
+<div id="product">
+	<div id="product_logo"></div>
+	<div id="product_name"><big><b></b></big></div>
+	<div id="product_description"></div>
+</div> <!-- id="product" -->
+
+
+<div id="main">
+
+
+<!-- Menu -->
+
+<div id="navigation">
+<br/>
+<h1>ldoc</h1>
+
+<ul>
+  <li><a href="../index.html">Index</a></li>
+</ul>
+
+<h2>Contents</h2>
+<ul>
+<li><a href="#Saml">Saml </a></li>
+<li><a href="#Binding">Binding </a></li>
+<li><a href="#IdP_SP">IdP/SP </a></li>
+</ul>
+
+
+<h2>Topics</h2>
+<ul class="">
+  <li><a href="../topics/00-Introduction.md.html">00-Introduction</a></li>
+  <li><a href="../topics/01-Installation.md.html">01-Installation</a></li>
+  <li><strong>02-Organization</strong></li>
+</ul>
+<h2>Modules</h2>
+<ul class="nowrap">
+  <li><a href="../modules/resty.saml.binding.html">resty.saml.binding</a></li>
+  <li><a href="../modules/resty.saml.html">resty.saml</a></li>
+  <li><a href="../modules/saml.html">saml</a></li>
+</ul>
+<h2>Examples</h2>
+<ul class="nowrap">
+  <li><a href="../examples/identity_provider.lua.html">identity_provider.lua</a></li>
+  <li><a href="../examples/service_provider.lua.html">service_provider.lua</a></li>
+  <li><a href="../examples/utils.lua.html">utils.lua</a></li>
+</ul>
+
+</div>
+
+<div id="content">
+
+
+<h1>Organization</h1>
+
+<p>There are two modules in this library - the core C code and the integration with the <a href="https://github.com/openresty/lua-nginx-module/#nginx-api-for-lua">Lua Nginx API</a>., depending on your preference and need for detail.  The C code is designed to work on its own without the presence of OpenResty.  In order of lowest to highest-level interfaces:</p>
+
+
+<p><a name="Saml"></a></p>
+<h2>Saml</h2>
+
+<p>The functions here fit into the following categories:</p>
+
+<ul>
+    <li>Working with keys</li>
+    <li>Working with documents</li>
+    <li>Signing or verifying content</li>
+</ul>
+
+<p>Providing a Lua interface for the entire surface area of <a href="http://www.xmlsoft.org/html/index.html">libxml2</a> or <a href="https://www.aleksey.com/xmlsec/api/xmlsec-reference.html">xmlsec</a> is an explicit non-goal of this library, though any function deemed critical to performing SAML operations may be added.  Further, the Lua user data (e.g. a <code>xmlDoc*</code> or <code>xmlSecKey*</code>) returned by these functions can be used with the <a href="http://luajit.org/ext_ffi.html">LuaJIT FFI</a> that is included in OpenResty builds.</p>
+
+<p>There are four basic functions here for working with signatures, each of which is a composition of calls to libxml2 and xmlsec:</p>
+
+<pre><code> |         | Document    | Binary        |
+ | ------- | ----------- | ------------- |
+ | Sign    | sign_doc    | sign_binary   |
+ | Verify  | verify_doc  | verify_binary |
+</code></pre>
+
+
+
+<p><a name="Binding"></a></p>
+<h2>Binding</h2>
+
+<p>This module builds on top of plain signatures with SAML-specific concepts.  Similarly, there are four main functions:</p>
+
+<pre><code> |           | Create          | Parse           |
+ | --------- | --------------- | --------------- |
+ | Redirect  | create_redirect | parse_redirect  |
+ | Post      | create_post     | parse_post      |
+</code></pre>
+
+
+<p>One notable aspect of the <code>*_parse</code> functions is the <code>cert_from_doc</code> or <code>key_mngr_from_doc</code> argument.  Between parsing and validating the xml and verifying the signature, you may need to determine which certificate to use based on some content in the document, such as the <code>Issuer</code>.  This is common when a single IdP communicates with multiple SPs or vice versa.</p>
+
+<p>When using the parse functions, the absence of an error should guarantee the following:</p>
+
+<ol>
+    <li>The HTTP method and request data (either query string or body) is correct</li>
+    <li>The XML document matches the XSD schema</li>
+    <li>The XML document is correctly signed with a key for the known cert</li>
+</ol>
+
+<p>Notably, this does not include any checks of the document's contents itself, such as the <code>IssueInstant</code> or any <code>Conditions</code>.  Any additional processing is the responsibility of the user.</p>
+
+<p>SAML implementations come in all shapes and sizes with varying adherance to the spec.  If you are working with an implementation that is not standard, you may have to fall back to the core interfaces, hopefully deriving your code from the functions in this module.</p>
+
+
+<p><a name="IdP_SP"></a></p>
+<h2>IdP/SP</h2>
+
+<p>At some point, there may be a module added for defining an Identity Provider or Service Provider in a more configuration-driven way, as is common in other SAML libraries such as <a href="https://github.com/onelogin/python3-saml#how-it-works">python3-saml</a>.  For now, refer to the example code for a basic implementation of each.</p>
+
+
+</div> <!-- id="content" -->
+</div> <!-- id="main" -->
+<div id="about">
+<i>generated by <a href="http://github.com/stevedonovan/LDoc">LDoc 1.4.6</a></i>
+<i style="float:right;">Last updated 2019-06-17 19:15:59 </i>
+</div> <!-- id="about" -->
+</div> <!-- id="container" -->
+</body>
+</html>

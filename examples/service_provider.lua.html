@@ -36,17 +36,19 @@
 <ul class="nowrap">
   <li><a href="../examples/identity_provider.lua.html">identity_provider.lua</a></li>
   <li><strong>service_provider.lua</strong></li>
-  <li><a href="../examples/templates.lua.html">templates.lua</a></li>
+  <li><a href="../examples/utils.lua.html">utils.lua</a></li>
 </ul>
 <h2>Modules</h2>
 <ul class="nowrap">
   <li><a href="../modules/resty.saml.binding.html">resty.saml.binding</a></li>
-  <li><a href="../modules/resty.saml.constants.html">resty.saml.constants</a></li>
+  <li><a href="../modules/resty.saml.html">resty.saml</a></li>
   <li><a href="../modules/saml.html">saml</a></li>
 </ul>
 <h2>Topics</h2>
 <ul class="">
   <li><a href="../topics/00-Introduction.md.html">00-Introduction</a></li>
+  <li><a href="../topics/01-Installation.md.html">01-Installation</a></li>
+  <li><a href="../topics/02-Organization.md.html">02-Organization</a></li>
 </ul>
 
 </div>
@@ -55,130 +57,184 @@
 
     <h2>service_provider.lua</h2>
 <pre>
-<span class="keyword">local</span> binding   = <span class="global">require</span> <span class="string">"resty.saml.binding"</span>
-<span class="keyword">local</span> constants = <span class="global">require</span> <span class="string">"resty.saml.constants"</span>
-<span class="keyword">local</span> sig       = <span class="global">require</span> <span class="string">"resty.saml.sig"</span>
-<span class="keyword">local</span> templates = <span class="global">require</span> <span class="string">"templates"</span>
-<span class="keyword">local</span> xml       = <span class="global">require</span> <span class="string">"resty.saml.xml"</span>
+<span class="keyword">local</span> saml  = <span class="global">require</span> <span class="string">"resty.saml"</span>
+<span class="keyword">local</span> utils = <span class="global">require</span> <span class="string">"utils"</span>
 
 <span class="keyword">local</span> _M = {}
-<span class="keyword">local</span> mt = { __index = _M }
 
+<span class="keyword">local</span> RSA_SHA_512_HREF = <span class="string">"http://www.w3.org/2001/04/xmldsig-more#rsa-sha512"</span>
 
-<span class="keyword">function</span> _M:new(metadata)
-  <span class="keyword">local</span> sp = {}
-  <span class="keyword">local</span> err = <span class="string">""</span>
-  sp.key = sig.load_key_file(metadata.key_file)
-  sp.cert = sig.load_cert_file(metadata.cert_file)
-  sig.key_load_cert_file(sp.key, metadata.cert_file)
-
-  sp.idp_cert = sig.load_cert_file(metadata.idp.cert_file)
-  sp.idp_mngr, err = sig.create_keys_manager({ sp.idp_cert })
-  <span class="global">assert</span>(sp.idp_mngr, err)
-
-  sp.metadata = metadata
-  <span class="keyword">return</span> <span class="global">setmetatable</span>(sp, mt)
+<span class="keyword">local</span> SIGNING_KEY = <span class="global">assert</span>(saml.key_read_file(<span class="string">"/ssl/sp.key"</span>, saml.KeyDataFormatPem))
+<span class="keyword">local</span> SIGNING_CERT = <span class="global">assert</span>(saml.key_read_file(<span class="string">"/ssl/sp.crt"</span>, saml.KeyDataFormatCertPem))
+<span class="keyword">if</span> <span class="keyword">not</span> saml.key_add_cert_file(SIGNING_KEY, <span class="string">"/ssl/sp.crt"</span>, saml.KeyDataFormatCertPem) <span class="keyword">then</span>
+  <span class="global">assert</span>(<span class="keyword">nil</span>, <span class="string">"could not add cert to signing key"</span>)
 <span class="keyword">end</span>
 
-<span class="keyword">function</span> _M:metadata_xml()
-  <span class="keyword">local</span> str = templates.metadata(self.metadata)
-  <span class="keyword">local</span> body, err = sig.sign_xml(self.key, constants.SIGNATURE_ALGORITHMS.RSA_SHA512, str)
-  <span class="keyword">if</span> err <span class="keyword">then</span>
-    ngx.log(ngx.ERR, err)
-    ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
+<span class="keyword">local</span> IDP_CERT = <span class="global">assert</span>(saml.key_read_file(<span class="string">"/ssl/idp.crt"</span>, saml.KeyDataFormatCertPem))
+<span class="keyword">local</span> IDP_CERT_MNGR = <span class="global">assert</span>(saml.create_keys_manager({ IDP_CERT }))
+
+<span class="keyword">local</span> SP_URI = <span class="string">"http://localhost:8088"</span>
+<span class="keyword">local</span> IDP_URI = <span class="string">"http://localhost:8089"</span>
+<span class="keyword">local</span> SP_PROVIDER_NAME = <span class="string">"Resty Service Provider"</span>
+
+<span class="keyword">local</span> <span class="keyword">function</span> key_mngr_from_doc(doc)
+  <span class="keyword">local</span> issuer = saml.doc_issuer(doc)
+  <span class="keyword">if</span> issuer == IDP_URI <span class="keyword">then</span>
+    <span class="keyword">return</span> IDP_CERT_MNGR
+  <span class="keyword">else</span>
+    ngx.log(ngx.WARN, <span class="string">"issuer "</span> .. <span class="global">tostring</span>(issuer) .. <span class="string">" not recognized"</span>)
+    <span class="keyword">return</span> <span class="keyword">nil</span>
   <span class="keyword">end</span>
-
-  ngx.header.content_type = <span class="string">"application/xml"</span>
-  ngx.header.content_length = #body
-  ngx.say(body)
-  ngx.exit(ngx.HTTP_OK)
 <span class="keyword">end</span>
 
-<span class="keyword">function</span> _M:authn_request()
-  <span class="keyword">return</span> templates.authn_request({
-    uuid=<span class="string">"dbb9fe26-6950-11e9-881e-0242ac140002"</span>,
-    datetime=<span class="string">"2019-04-28T00:59:21Z"</span>,
-    issuer=self.metadata.entity_id,
-    destination=<span class="string">"http://localhost:8089/sso"</span>,
-    acs_url=self.metadata.entity_id .. self.metadata.acs.location,
-    name=<span class="string">"OpenResty Service Provider"</span>,
+<span class="keyword">local</span> AUTHN_REQUEST = <span class="string">[[
+&lt;?xml version="1.0" ?&gt;
+&lt;samlp:AuthnRequest xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion" xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol" Version="2.0" ID="${uuid}" IssueInstant="${issue_instant}" Destination="${destination}" ProtocolBinding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" AssertionConsumerServiceURL="${acs_url}" ProviderName="${provider_name}"&gt;
+  &lt;saml:Issuer Format="urn:oasis:names:tc:SAML:2.0:nameid-format:entity"&gt;${issuer}&lt;/saml:Issuer&gt;
+  &lt;samlp:NameIDPolicy Format="urn:oasis:names:tc:SAML:2.0:nameid-format:transient" AllowCreate="true"/&gt;
+&lt;/samlp:AuthnRequest&gt;
+]]</span>
+
+<span class="keyword">local</span> <span class="keyword">function</span> authn_request()
+  <span class="keyword">return</span> utils.interp(AUTHN_REQUEST, {
+    acs_url = SP_URI .. <span class="string">"/acs"</span>,
+    destination = IDP_URI .. <span class="string">"/sso"</span>,
+    issue_instant = <span class="global">os</span>.date(<span class="string">"!%Y-%m-%dT%TZ"</span>),
+    issuer = SP_URI,
+    provider_name = SP_PROVIDER_NAME,
+    uuid = <span class="string">"id-"</span> .. <span class="global">math</span>.random(<span class="number">1</span>, <span class="number">100</span>),
   })
 <span class="keyword">end</span>
 
-<span class="keyword">function</span> _M:sso(relay_state)
+<span class="keyword">local</span> LOGOUT_REQUEST = <span class="string">[[
+&lt;?xml version="1.0"?&gt;
+&lt;samlp:LogoutRequest xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion" xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol" Version="2.0" ID="{* id *}" IssueInstant="{* issue_instant *}" Destination="{* destination *}"&gt;
+  &lt;saml:Issuer Format="urn:oasis:names:tc:SAML:2.0:nameid-format:entity"&gt;{* issuer *}&lt;/saml:Issuer&gt;
+  &lt;saml:NameID NameQualifier="{* name_qualifier *}" SPNameQualifier="{* sp_name_qualifier *}" Format="urn:oasis:names:tc:SAML:2.0:nameid-format:persistent"&gt;{* name_id *}&lt;/saml:NameID&gt;
+  &lt;samlp:SessionIndex&gt;{* session_index *}&lt;/samlp:SessionIndex&gt;
+&lt;/samlp:LogoutRequest&gt;
+]]</span>
+
+<span class="keyword">local</span> <span class="keyword">function</span> logout_request(name_id, session_index)
+  <span class="keyword">return</span> utils.interp(LOGOUT_REQUEST, {
+    destination = IDP_URI .. <span class="string">"/sls"</span>,
+    name_id = name_id,
+    name_qualifier = IDP_URI,
+    id = <span class="string">"id-"</span> .. <span class="global">math</span>.random(<span class="number">1</span>, <span class="number">100</span>),
+    issue_instant = <span class="global">os</span>.date(<span class="string">"!%Y-%m-%dT%TZ"</span>),
+    issuer = SP_URI,
+    provider_name = SP_PROVIDER_NAME,
+    session_index = session_index,
+    sp_name_qualifier = SP_URI,
+  })
+<span class="keyword">end</span>
+
+<span class="keyword">function</span> _M.home()
+  <span class="keyword">local</span> username = ngx.var.cookie_username
+  ngx.header.content_type = <span class="string">"text/html"</span>
+  <span class="keyword">if</span> username <span class="keyword">then</span>
+    ngx.say(<span class="string">"&lt;h1&gt;hello "</span> .. username .. <span class="string">'&lt;/h1&gt;&lt;a href="/logout"&gt;log out&lt;/a&gt;'</span>)
+  <span class="keyword">else</span>
+    ngx.say(<span class="string">'&lt;a href="/sso"&gt;log in&lt;/a&gt;'</span>)
+  <span class="keyword">end</span>
+  ngx.exit(ngx.HTTP_OK)
+<span class="keyword">end</span>
+
+<span class="keyword">function</span> _M.sso()
   <span class="keyword">if</span> ngx.req.get_method() ~= <span class="string">"GET"</span> <span class="keyword">then</span>
     ngx.exit(ngx.HTTP_NOT_ALLOWED)
   <span class="keyword">end</span>
 
-  <span class="keyword">local</span> req = self:authn_request()
+  <span class="keyword">local</span> args = ngx.req.get_uri_args()
+  <span class="keyword">local</span> relay_state = args.relay_state <span class="keyword">or</span> <span class="string">"/"</span>
 
-  <span class="keyword">if</span> self.metadata.sso.binding == constants.XMLNS.BINDINGS.HTTP_REDIRECT <span class="keyword">then</span>
-    <span class="keyword">local</span> query_str, err = binding.create_redirect(self.key, constants.SIGNATURE_ALGORITHMS.RSA_SHA512, req, relay_state)
-    <span class="keyword">if</span> err <span class="keyword">then</span>
-      ngx.log(ngx.ERR, err)
-      ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
-    <span class="keyword">end</span>
-
-    ngx.status = ngx.HTTP_MOVED_TEMPORARILY
-    ngx.header.cache_control = <span class="string">"no-cache, no-store"</span>
-    ngx.header.pragma = <span class="string">"no-cache"</span>
-    ngx.header.location = <span class="string">"http://localhost:8089/sso?"</span> .. query_str
-  <span class="keyword">elseif</span> self.metadata.sso.binding == constants.XMLNS.BINDINGS.HTTP_POST <span class="keyword">then</span>
-    <span class="keyword">local</span> body, err = binding.create_post(self.key, constants.SIGNATURE_ALGORITHMS.RSA_SHA512, <span class="string">"http://localhost:8089/sso"</span>, {
-      SAMLRequest = req,
-      RelayState = relay_state,
-    })
-    <span class="keyword">if</span> err <span class="keyword">then</span>
-      ngx.log(ngx.ERR, err)
-      ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
-    <span class="keyword">end</span>
-    ngx.header.cache_control = <span class="string">"no-cache, no-store"</span>
-    ngx.header.pragma = <span class="string">"no-cache"</span>
-    ngx.header.content_type = <span class="string">"text/html"</span>
-    ngx.header.content_length = #body
-    ngx.say(body)
-  <span class="keyword">else</span>
-    ngx.log(ngx.ERR, <span class="string">"unknown binding "</span> .. self.metadata.sso.binding)
+  <span class="keyword">local</span> query_str, err = saml.binding.create_redirect(SIGNING_KEY, {
+    RelayState = relay_state,
+    SAMLRequest = authn_request(),
+    SigAlg = RSA_SHA_512_HREF,
+  })
+  <span class="keyword">if</span> err <span class="keyword">then</span>
+    ngx.log(ngx.ERR, err)
     ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
   <span class="keyword">end</span>
+
+
+  ngx.status = ngx.HTTP_MOVED_TEMPORARILY
+  ngx.header.cache_control = <span class="string">"no-cache, no-store"</span>
+  ngx.header.pragma = <span class="string">"no-cache"</span>
+  ngx.header.location = IDP_URI .. <span class="string">"/sso?"</span> .. query_str
   ngx.exit(ngx.HTTP_OK)
 <span class="keyword">end</span>
 
-<span class="keyword">function</span> _M:acs()
-  <span class="keyword">if</span> ngx.req.get_method() ~= <span class="string">"POST"</span> <span class="keyword">then</span>
-    ngx.exit(ngx.HTTP_NOT_ALLOWED)
-  <span class="keyword">end</span>
+<span class="keyword">function</span> _M.acs()
+  <span class="keyword">local</span> doc, args, err = saml.binding.parse_post(<span class="string">"SAMLResponse"</span>, key_mngr_from_doc)
 
-  ngx.req.read_body()
-  <span class="keyword">local</span> args, err = ngx.req.get_post_args()
-  <span class="keyword">if</span> <span class="keyword">not</span> args <span class="keyword">then</span>
-    ngx.log(ngx.ERR, <span class="string">"failed to get post args: "</span> .. err)
-    ngx.exit(ngx.HTTP_BAD_REQUEST)
-  <span class="keyword">end</span>
-
-  <span class="keyword">if</span> <span class="keyword">not</span> args.SAMLResponse <span class="keyword">then</span>
-    ngx.exit(ngx.HTTP_BAD_REQUEST)
-  <span class="keyword">end</span>
-
-  <span class="keyword">local</span> doc = xml.parse(ngx.decode_base64(args.SAMLResponse))
-  <span class="keyword">if</span> doc == <span class="keyword">nil</span> <span class="keyword">then</span>
-    <span class="keyword">return</span> <span class="keyword">nil</span>, args, <span class="string">"unable to parse file"</span>
-  <span class="keyword">end</span>
-
-  <span class="keyword">local</span> valid, err = sig.verify_doc(self.idp_mngr, doc)
   <span class="keyword">if</span> err <span class="keyword">then</span>
-    xml.free_doc(doc)
+    <span class="keyword">if</span> doc <span class="keyword">then</span> saml.doc_free(doc) <span class="keyword">end</span>
+    ngx.log(ngx.WARN, err)
+    ngx.exit(ngx.HTTP_BAD_REQUEST)
+  <span class="keyword">end</span>
+
+  <span class="comment">-- TODO: lookup status
+</span>
+  <span class="keyword">local</span> attrs = saml.doc_attrs(doc)
+  saml.doc_free(doc)
+
+  ngx.header[<span class="string">"Set-Cookie"</span>] = <span class="string">"username="</span> .. attrs.username .. <span class="string">";"</span>
+
+  <span class="keyword">local</span> relay_state = <span class="string">"/"</span>
+  <span class="keyword">if</span> args.relay_state <span class="keyword">then</span>
+    relay_state = ngx.unescape_uri(args.relay_state)
+  <span class="keyword">end</span>
+
+  ngx.status = ngx.HTTP_MOVED_TEMPORARILY
+  ngx.header.location = relay_state
+  ngx.exit(ngx.HTTP_OK)
+<span class="keyword">end</span>
+
+<span class="keyword">function</span> _M.sls()
+  <span class="keyword">local</span> doc, args, err = saml.binding.parse_post(<span class="string">"SAMLResponse"</span>, key_mngr_from_doc)
+
+  <span class="keyword">local</span> request_id = <span class="string">""</span>
+  <span class="keyword">if</span> doc <span class="keyword">then</span>
+    request_id = saml.doc_id(doc)
+    saml.doc_free(doc)
+  <span class="keyword">end</span>
+
+  <span class="keyword">local</span> status
+  <span class="keyword">if</span> err <span class="keyword">then</span>
+    ngx.log(ngx.WARN, err)
+    status = saml.STATUS_CODES_REQUESTER
+  <span class="keyword">else</span>
+    status = saml.STATUS_CODES_SUCCESS
+  <span class="keyword">end</span>
+
+  ngx.header[<span class="string">"Set-Cookie"</span>] = <span class="string">"username=; Max-Age=0"</span>
+  ngx.say(logout_response(request_id, saml.STATUS_CODES_SUCCESS))
+  ngx.exit(ngx.HTTP_OK)
+<span class="keyword">end</span>
+
+<span class="keyword">function</span> _M.logout()
+  <span class="keyword">local</span> username = ngx.var.cookie_username
+  <span class="keyword">if</span> <span class="keyword">not</span> username <span class="keyword">then</span>
+    ngx.exit(ngx.HTTP_UNAUTHORIZED)
+  <span class="keyword">end</span>
+
+  <span class="keyword">local</span> query_str, err = saml.binding.create_redirect(SIGNING_KEY, {
+    RelayState =  <span class="string">"/"</span>,
+    SAMLRequest = logout_request(name_id, session_index), <span class="comment">-- TODO store these on ngx.shared during acs
+</span>    SigAlg = RSA_SHA_512_HREF,
+  })
+  <span class="keyword">if</span> err <span class="keyword">then</span>
     ngx.log(ngx.ERR, err)
-    ngx.exit(ngx.HTTP_BAD_REQUEST)
+    ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
   <span class="keyword">end</span>
 
-  <span class="keyword">if</span> <span class="keyword">not</span> valid <span class="keyword">then</span>
-    xml.free_doc(doc)
-    ngx.log(ngx.WARN, <span class="string">"invalid signature"</span>)
-    ngx.exit(ngx.HTTP_BAD_REQUEST)
-  <span class="keyword">end</span>
-
-  <span class="keyword">return</span> doc, args, <span class="keyword">nil</span>
+  ngx.status = ngx.HTTP_MOVED_TEMPORARILY
+  ngx.header.cache_control = <span class="string">"no-cache, no-store"</span>
+  ngx.header.pragma = <span class="string">"no-cache"</span>
+  ngx.header.location = IDP_URI .. <span class="string">"/slo?"</span> .. query_str
+  ngx.exit(ngx.HTTP_OK)
 <span class="keyword">end</span>
 
 <span class="keyword">return</span> _M</pre>
@@ -188,7 +244,7 @@
 </div> <!-- id="main" -->
 <div id="about">
 <i>generated by <a href="http://github.com/stevedonovan/LDoc">LDoc 1.4.6</a></i>
-<i style="float:right;">Last updated 2019-06-11 00:35:08 </i>
+<i style="float:right;">Last updated 2019-06-17 19:15:59 </i>
 </div> <!-- id="about" -->
 </div> <!-- id="container" -->
 </body>
