@@ -1,7 +1,7 @@
-lua_saml.o
-lua_saml.so
-saml.o
-saml.so
+*.o
+*.so
+bin/*
+!bin/saml.c
 out
 .luarocks
 luarocks

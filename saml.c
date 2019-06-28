@@ -20,7 +20,7 @@
 #include "saml.h"
 
 
-static const char* XSD_MAIN = "data/xsd/saml-schema-protocol-2.0.xsd";
+static const char* XSD_MAIN = "/data/xsd/saml-schema-protocol-2.0.xsd";
 static xmlXPathCompExpr *XPATH_ATTRIBUTES, *XPATH_SESSION_INDEX;
 static xmlSchemaValidCtxt* XML_SCHEMA_VALIDATE_CTX;
 
