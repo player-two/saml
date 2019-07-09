@@ -2,8 +2,5 @@
 *.so
 bin/*
 !bin/saml.c
+lua/.build
 out
-.luarocks
-luarocks
-lua
-lua_modules

@@ -1,5 +1,6 @@
 --[[---
 Namespace for all library functions
+@module resty.saml
 @see saml
 @see resty.saml.binding
 ]]

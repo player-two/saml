@@ -1,5 +1,6 @@
 --[[---
 Functions for creating or parsing SAML bindings
+@module resty.saml.binding
 ]]
 
 local saml = require "saml"

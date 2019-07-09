@@ -1,11 +1,11 @@
-package = "lua-resty-saml"
+package = "saml"
 version = "dev-1"
 source = {
-  url = "git://github.com/megalord/lua-resty-saml.git"
+  url = "https://github.com/megalord/saml/releases/download/v0.1/lua.tar.gz"
 }
 description = {
   summary = "Provides SAML support for OpenResty",
-  homepage = "https://megalord.github.io/lua-resty-saml/",
+  homepage = "https://megalord.github.io/saml/",
   license = "MIT",
 }
 dependencies = {
@@ -22,6 +22,7 @@ external_dependencies = {
 }
 build = {
   type = "make",
+  build_target = "build",
   build_variables = {
     CFLAGS="$(CFLAGS)",
     LDFLAGS="$(LDFLAGS)",

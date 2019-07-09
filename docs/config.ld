@@ -1,8 +1,8 @@
-project = "lua-resty-saml"
-title = "lua-resty-saml documentation"
-description = "An OpenResty plugin for Single Sign-On via SAML"
+project = "saml"
+title = "saml documentation"
+description = "A library for enabling Single Sign-On via SAML"
 full_description = [[
-Welcome to the documentation for lua-resty-saml!  See @{00-Introduction.md} to get started.
+Welcome to the documentation for saml!  See @{00-Introduction.md} to get started.
 ]]
 
 dir = "../out"
@@ -17,8 +17,8 @@ topics = {
 }
 
 file = {
-  "../lib/",
-  "../lua_saml.c",
+  "../lua/resty/",
+  "../lua/lua_saml.c",
 }
 
-examples = "../example"
+examples = "../lua/example"

@@ -1,6 +1,6 @@
 FROM openresty/openresty:1.13.6.2-2-centos
 
-RUN yum install -y libxml2-devel openssl-devel zlib-devel gcc make && \
+RUN yum install -y libxml2-devel openssl-devel zlib-devel gcc make git && \
     yum clean all -y
 
 ENV XMLSEC_VERSION=1.2.28

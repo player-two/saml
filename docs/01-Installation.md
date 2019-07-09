@@ -24,13 +24,13 @@ The compiler flags, notably which crypto backend is used by xmlsec1, are generat
 [Install LuaRocks](https://github.com/luarocks/luarocks/wiki/Download), then
 
 ```bash
-luarocks install lua-resty-saml
+luarocks install saml
 ```
 
 ### Make
 
 ```bash
-git clone https://github.com/megalord/lua-resty-saml && cd lua-resty-saml
+git clone https://github.com/megalord/saml && cd saml
 make install INST_LIBDIR=<lua cpath> INST_LUADIR=<lua path> INST_CONFDIR=<rock_dir>
 ```
 
@@ -57,7 +57,7 @@ Set this to true for extra debugging information to be sent to stderr.  This inf
 
 Required string
 
-Indicates the path to the installed Lua rock.  It is necessary because this library bundles the SAML XSD schemas internally (to prevent them being fetched over the network at runtime).  If using OpenResty, this is likely `/usr/local/openresty/luajit/lib/luarocks/rocks/lua-resty-saml/<version>/`.
+Indicates the path to the installed Lua rock.  It is necessary because this library bundles the SAML XSD schemas internally (to prevent them being fetched over the network at runtime).  If using OpenResty, this is likely `/usr/local/openresty/luajit/lib/luarocks/rocks/saml/<version>/`.
 
 
 ## Shutdown
