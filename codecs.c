@@ -1,6 +1,3 @@
-#include <assert.h>
-#include <math.h>
-
 static const char BASE64_ENCODE_TABLE[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
 char* base64_encode(char* c, int len) {

@@ -1,5 +1,3 @@
-#include "codecs.c"
-
 typedef struct {
   int len, total;
   char *data;
