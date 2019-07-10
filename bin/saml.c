@@ -143,83 +143,6 @@ char* uri_args_serialize(uri_arg_t* arg) {
   return out;
 }
 
-unsigned char BASE64_ENCODE_TABLE[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-
-unsigned char* base64_encode(unsigned char* c, int len) {
-  unsigned char* out = malloc(len * sizeof(unsigned char));
-  int a[3];
-  uint32_t sum;
-  while (len-- > 0) {
-    a[0] = *c++ << 16;
-    a[1] = len-- > 0 ? (*c++ << 8) : 0;
-    a[2] = len-- > 0 ? *c++ : 0;
-    sum = a[0] & a[1] & a[2];
-    *out++ = BASE64_ENCODE_TABLE[sum >> 18 & 0x3f];
-    *out++ = BASE64_ENCODE_TABLE[sum >> 12 & 0x3f];
-    *out++ = BASE64_ENCODE_TABLE[sum >>  6 & 0x3f];
-    *out++ = BASE64_ENCODE_TABLE[sum       & 0x3f];
-  }
-  *out = '\0';
-  return out;
-}
-
-int base64_is_valid(unsigned char c) {
-  return (('A' <= c && c <= 'Z') || ('a' <= c && c <= 'z') || ('0' <= c && c <= '9') || c == '+' || c == '/') ? 1 : 0;
-}
-
-unsigned char base64_sub(unsigned char c) {
-  if (c == '+') {
-    return 62;
-  } else if (c == '/') {
-    return 63;
-  } else if ('A' <= c && c <= 'Z') {
-    return c - 'A';
-  } else if ('a' <= c && c <= 'z') {
-    return c - 'a' + 26;
-  } else {
-    assert('0' <= c && c <= '9');
-    return c - '0' + 52;
-  }
-}
-
-int base64_decode(unsigned char* in, int in_len, unsigned char** out, int* out_len) {
-  if (in_len % 4 != 0) {
-    return -1; // isn't padded correctly
-  }
-
-  unsigned char* stop = in + in_len;
-  *out = malloc((in_len / 4) * 3 * sizeof(unsigned char));
-  unsigned char* o = *out;
-  uint32_t sum;
-
-  *out_len = 0;
-  while (in < stop) {
-    sum = 0;
-    int i;
-    for(i = 3; i >= 0; i--) {
-      if (base64_is_valid(*in)) {
-        sum = sum + (base64_sub(*in++) << (i * 6));
-      } else if (*in == '=') {
-        in++;
-        break;
-      } else {
-        return -1;
-      }
-    }
-    if (i == 3) break; // this should never happen because it implies an entire quadruplet of padding
-    *o++ = sum >> 16 & 0xFF;
-    *out_len = *out_len + 1;
-    if (i == 2) break;
-    *o++ = sum >>  8 & 0xFF;
-    *out_len = *out_len + 1;
-    if (i == 1) break;
-    *o++ = sum       & 0xFF;
-    *out_len = *out_len + 1;
-    if (i == 0) break;
-  }
-  return 0;
-}
-
 int verify_redirect(char* args[], int args_len) {
   if (args_len < 1) {
     fprintf(stderr, "not enough arguments\n");
@@ -306,76 +229,12 @@ int verify_redirect(char* args[], int args_len) {
     relay_state->next = sig_alg;
   }
 
-
-  xmlSecTransformId transform_id = xmlSecTransformIdListFindByHref(xmlSecTransformIdsGet(), (xmlChar*)sig_alg->value, xmlSecTransformUriTypeAny);
-  if (transform_id == NULL) {
-    fprintf(stderr, "No transform found for %s\n", sig_alg->value);
-    //uri_arg_free(uri_arg);
+  xmlDoc* doc;
+  if (saml_binding_redirect_parse(saml->value, sig_alg->value, &doc) < 0) {
     return 1;
   }
 
-  unsigned char* decoded;
-  int decoded_len;
-  if (base64_decode((unsigned char*)saml->value, strlen(saml->value), &decoded, &decoded_len) < 0) {
-    fprintf(stderr, "bad base64 data for %s\n", saml->name);
-    if (decoded != NULL) {
-      free(decoded);
-    }
-    return 1;
-  }
-
-  // zlib.inflate(-15, decode_base64(args.SAMLRequest || args.SAMLResponse))
-  z_stream stream = (z_stream){
-    .zalloc   = Z_NULL,
-    .zfree    = Z_NULL,
-    .opaque   = Z_NULL,
-    .next_in = decoded,
-    .avail_in = decoded_len,
-  };
-  if (inflateInit2(&stream, -15) != Z_OK) {
-    fprintf(stderr, "zlib setup failed\n");
-    return 1;
-  }
-
-  unsigned char out[INFLATED_MAXLEN];
-  stream.next_out = out;
-  stream.avail_out = sizeof(out);
-
-  int zlib_res = inflate(&stream, Z_FINISH);
-  if (!(zlib_res == Z_STREAM_END || (zlib_res == Z_BUF_ERROR && stream.avail_in == 0))) {
-    fprintf(stderr, "zlib inflate failed (%d): %s\n", zlib_res, stream.msg);
-    inflateEnd(&stream);
-    return 1;
-  }
-  out[stream.total_out] = '\0';
-  inflateEnd(&stream);
-
-  xmlDoc* doc = xmlReadMemory((char*)out, stream.total_out, "tmp.xml", NULL, 0);
-  inflateEnd(&stream);
-  if (doc == NULL) {
-    fprintf(stderr, "decompressed content is not valid xml: %s\n", out);
-    return 1;
-  }
-
-  if (!saml_doc_validate(doc)) {
-    fprintf(stderr, "document does not validate against schema\n");
-    return 1;
-  }
-
-  char* sig_input = uri_args_serialize(saml);
-  if (sig_input == NULL) {
-    fprintf(stderr, "failed to serialize uri args\n");
-    return 1;
-  }
-
-  unsigned char* sig;
-  int sig_len;
-  if (base64_decode((unsigned char*)signature->value, strlen(signature->value), &sig, &sig_len) < 0) {
-    fprintf(stderr, "failed to decode signature\n");
-    return 1;
-  }
-  int res = saml_verify_binary(cert, transform_id, (unsigned char*)sig_input, strlen(sig_input), sig, sig_len);
-  if (res < 0) {
+  if (saml_binding_redirect_verify(cert, saml->name, saml->value, sig_alg->value, (relay_state == NULL ? NULL : relay_state->value), signature->value) < 0) {
     return 1;
   }
 

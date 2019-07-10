@@ -50,4 +50,7 @@ int saml_verify_binary(xmlSecKey* cert, xmlSecTransformId transform_id, unsigned
 int saml_sign_doc(xmlSecKey* key, xmlSecTransformId transform_id, xmlDoc* doc, saml_doc_opts_t* opts);
 int saml_verify_doc(xmlSecKeysMngr* mngr, xmlDoc* doc, saml_doc_opts_t* opts);
 
+int saml_binding_redirect_create(xmlSecKey* key, char* saml_type, char* content, char* sig_alg, char* relay_state);
+int saml_binding_redirect_parse(char* content, char* sig_alg, xmlDoc** doc);
+int saml_binding_redirect_verify(xmlSecKey* cert, char* saml_type, char* content, char* sig_alg, char* relay_state, char* signature);
 #endif

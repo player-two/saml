@@ -17,6 +17,8 @@
 #include <xmlsec/crypto.h>
 #include <xmlsec/errors.h>
 
+#include <zlib.h>
+
 #include "saml.h"
 
 
@@ -518,3 +520,5 @@ int saml_verify_doc(xmlSecKeysMngr* mngr, xmlDoc* doc, saml_doc_opts_t* opts) {
   xmlSecDSigCtxDestroy(ctx);
   return status;
 }
+
+#include "binding.c"
