@@ -1,4 +1,4 @@
-include common.mk
+include src/common.mk
 
 .PHONY: setup
 setup:
@@ -20,11 +20,14 @@ docs:
 test:
 	$(MAKE) -C lua test
 
+src/saml.o:
+	$(MAKE) -C src -f common.mk saml.o
+
 bin/saml.o: bin/saml.c
 	$(CC) -c -o bin/saml.o $<
 
-bin/saml: bin/saml.c saml.o
-	$(CC) -I$(shell pwd) -g -Wall -Werror -std=c99 -I$(LIBXML2_INCDIR) -I$(XMLSEC1_INCDIR) $(XMLSEC1_CFLAGS) -L$(LIBXML2_LIBDIR) -L$(XMLSEC1_LIBDIR) $(XMLSEC1_LDFLAGS) -lcurl -o bin/saml $^
+bin/saml: bin/saml.c src/saml.o
+	$(CC) -I$(shell pwd) -g -Wall -Werror -std=c99 -Isrc -I$(LIBXML2_INCDIR) -I$(XMLSEC1_INCDIR) $(XMLSEC1_CFLAGS) -L$(LIBXML2_LIBDIR) -L$(XMLSEC1_LIBDIR) $(XMLSEC1_LDFLAGS) -lcurl -o bin/saml $^
 
 .PHONY: cli
 cli: bin/saml

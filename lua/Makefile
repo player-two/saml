@@ -9,7 +9,7 @@ TEST_ARGS?=.
 prepack:
 	rm -rf .build
 	mkdir .build
-	cp -R resty ../data ../saml.h ../*.c lua_saml.c ../common.mk Makefile saml-dev-1.rockspec .build
+	cp -R resty ../data ../src/* lua_saml.c Makefile saml-dev-1.rockspec .build
 
 .PHONY: test
 test: prepack

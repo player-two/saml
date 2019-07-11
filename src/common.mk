@@ -15,4 +15,5 @@ LDFLAGS_ALL=$(LIBFLAG) $(LDFLAGS) -L$(LIBXML2_LIBDIR) -L$(XMLSEC1_LIBDIR) $(XMLS
 VERSION=0.1
 
 saml.o: saml.c
+	@echo $(CFLAGS_ALL)
 	$(CC) -c $(CFLAGS_ALL) -o $@ $<
