@@ -1,28 +1,46 @@
 static const char BASE64_ENCODE_TABLE[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
-char* base64_encode(char* c, int len) {
-  char* out = malloc(len * sizeof(char));
+char* saml_base64_encode(const byte* c, int len) {
+  char* out = malloc(ceil(len * 4 / 3) + 4); // up to 3 bytes in padding
+  char* out_i = out;
   int a[3];
   uint32_t sum;
+  int padding = 0;
   while (len-- > 0) {
     a[0] = *c++ << 16;
-    a[1] = len-- > 0 ? (*c++ << 8) : 0;
-    a[2] = len-- > 0 ? *c++ : 0;
-    sum = a[0] & a[1] & a[2];
-    *out++ = BASE64_ENCODE_TABLE[sum >> 18 & 0x3f];
-    *out++ = BASE64_ENCODE_TABLE[sum >> 12 & 0x3f];
-    *out++ = BASE64_ENCODE_TABLE[sum >>  6 & 0x3f];
-    *out++ = BASE64_ENCODE_TABLE[sum       & 0x3f];
+
+    if (len-- > 0) {
+      a[1] = *c++ << 8;
+      if (len-- > 0) {
+        a[2] = *c++;
+      } else {
+        a[2] = 0;
+        padding = 1;
+      }
+    } else {
+      a[1] = 0;
+      a[2] = 0;
+      padding = 2;
+    }
+
+    sum = a[0] | a[1] | a[2];
+    int i;
+    for (i = 3; i >= padding; i--) {
+      *out_i++ = BASE64_ENCODE_TABLE[(sum >> i * 6) & 0x3f];
+    }
+    for (; i >= 0; i--) {
+      *out_i++ = '=';
+    }
   }
-  *out = '\0';
+  *out_i = '\0';
   return out;
 }
 
-static int base64_is_valid(char c) {
+static int base64_is_valid(byte c) {
   return (('A' <= c && c <= 'Z') || ('a' <= c && c <= 'z') || ('0' <= c && c <= '9') || c == '+' || c == '/') ? 1 : 0;
 }
 
-static char base64_sub(char c) {
+static char base64_sub(byte c) {
   if (c == '+') {
     return 62;
   } else if (c == '/') {
@@ -37,14 +55,14 @@ static char base64_sub(char c) {
   }
 }
 
-int base64_decode(char* in, int in_len, char** out, int* out_len) {
+int saml_base64_decode(const char* in, int in_len, byte** out, int* out_len) {
   if (in_len % 4 != 0) {
     return -1; // isn't padded correctly
   }
 
-  char* stop = in + in_len;
-  *out = malloc((in_len / 4) * 3 * sizeof(char));
-  char* o = *out;
+  const char* stop = in + in_len;
+  *out = malloc((in_len / 4) * 3);
+  byte* o = *out;
   uint32_t sum;
 
   *out_len = 0;
@@ -56,6 +74,7 @@ int base64_decode(char* in, int in_len, char** out, int* out_len) {
         sum = sum + (base64_sub(*in++) << (i * 6));
       } else if (*in == '=') {
         in++;
+        i++;
         break;
       } else {
         return -1;
@@ -84,7 +103,7 @@ static int hex_is_valid(char c) {
 }
 
 static char hex_from_dec(char n) {
-  return n + (n < 10 ? '0' : 'a');
+  return n + (n < 10 ? '0' : ('a' - 10));
 }
 
 static char hex_to_dec(char c) {
@@ -98,7 +117,7 @@ static char hex_to_dec(char c) {
   }
 }
 
-char* uri_encode(char* in) {
+char* saml_uri_encode(const char* in) {
   int out_i = 0;
   char* out = malloc(3 * strlen(in) + 1); // worst case where every char must be encoded
   while(*in != '\0') {
@@ -115,7 +134,7 @@ char* uri_encode(char* in) {
   return out;
 }
 
-int uri_decode(char* in, char** out) {
+int saml_uri_decode(const char* in, char** out) {
   *out = malloc(strlen(in) + 1); // worst case where every char is unreserved
   char* out_c = *out;
   while(*in != '\0') {

@@ -11,6 +11,11 @@
 
 #include "saml.h"
 
+#if (LUA_VERSION_NUM <= 502)
+// Always cast the result
+#define luaL_len(L, i) lua_objlen(L, i)
+#endif
+
 
 /***
 Initialize the libxml2 parser and xmlsec; see @{01-Installation.md}
@@ -46,6 +51,73 @@ Deinitialize libxml2 and xmlsec; see @{01-Installation.md}
 static int shutdown(lua_State* L) {
   saml_shutdown();
   return 0;
+}
+
+
+static int base64_encode(lua_State* L) {
+  lua_settop(L, 1);
+
+  size_t in_len;
+  const char* in = luaL_checklstring(L, 1, &in_len);
+  lua_pop(L, 1);
+
+  char* out = saml_base64_encode((byte*)in, in_len);
+  lua_pushstring(L, out);
+  free(out);
+  return 1;
+}
+
+
+static int base64_decode(lua_State* L) {
+  lua_settop(L, 1);
+
+  size_t in_len;
+  const char* in = luaL_checklstring(L, 1, &in_len);
+  lua_pop(L, 1);
+
+  byte* out;
+  int out_len;
+  if (saml_base64_decode(in, in_len, &out, &out_len) < 0) {
+    lua_pushnil(L);
+  } else {
+    lua_pushlstring(L, (char*)out, out_len);
+  }
+  if (out != NULL) {
+    free(out);
+  }
+  return 1;
+}
+
+
+static int uri_encode(lua_State* L) {
+  lua_settop(L, 1);
+
+  const char* in = luaL_checklstring(L, 1, NULL);
+  lua_pop(L, 1);
+
+  char* out = saml_uri_encode(in);
+  lua_pushstring(L, out);
+  free(out);
+  return 1;
+}
+
+
+static int uri_decode(lua_State* L) {
+  lua_settop(L, 1);
+
+  const char* in = luaL_checklstring(L, 1, NULL);
+  lua_pop(L, 1);
+
+  char* out;
+  if (saml_uri_decode(in, &out) < 0) {
+    lua_pushnil(L);
+  } else {
+    lua_pushstring(L, out);
+  }
+  if (out != NULL) {
+    free(out);
+  }
+  return 1;
 }
 
 
@@ -277,7 +349,11 @@ static int doc_attrs(lua_State* L) {
 
 
 static int get_key_format(lua_State* L, int narg) {
+#if (LUA_VERSION_NUM > 502)
+  int format = (int)luaL_checkinteger(L, narg);
+#else
   int format = luaL_checkint(L, narg);
+#endif
   luaL_argcheck(L, (xmlSecKeyDataFormatUnknown <= format && format <= xmlSecKeyDataFormatCertDer), narg, \
                 "format is not valid");
   return format;
@@ -400,7 +476,7 @@ local mngr, err = saml.create_keys_manager({ cert })
 static int create_keys_mngr(lua_State* L) {
   lua_settop(L, 1);
   luaL_checktype(L, 1, LUA_TTABLE);
-  size_t len = lua_objlen(L, 1);
+  size_t len = (size_t)luaL_len(L, 1);
 
   xmlSecKeysMngr* mngr = xmlSecKeysMngrCreate();
   if (mngr == NULL) {
@@ -519,7 +595,7 @@ int sign_get_opts(lua_State* L, int i, saml_doc_opts_t* opts) {
     return i + 2;
   } else {
     luaL_checktype(L, i + 2, LUA_TTABLE);
-    size_t len = lua_objlen(L, i + 2);
+    size_t len = (size_t)luaL_len(L, i + 2);
     if (len != 2) {
       //lua_pop(L, 6);
       luaL_argerror(L, i, "insert_after must be a table of form {namespace, element}");
@@ -699,9 +775,39 @@ static int verify_doc(lua_State* L) {
 }
 
 
+static int binding_redirect_create(lua_State* L) {
+  lua_settop(L, 5);
+
+  xmlSecKey* key = (xmlSecKey*)lua_touserdata(L, 1);
+  luaL_argcheck(L, key != NULL, 1, "`xmlSecKey*' expected");
+
+  char* saml_type = (char*)luaL_checklstring(L, 2, NULL);
+  char* content = (char*)luaL_checklstring(L, 3, NULL);
+  char* sig_alg = (char*)luaL_checklstring(L, 4, NULL);
+  char* relay_state = (char*)luaL_checklstring(L, 5, NULL);
+  lua_pop(L, 5);
+
+  str_t query;
+  if (saml_binding_redirect_create(key, saml_type, content, sig_alg, relay_state, &query) < 0) {
+    lua_pushnil(L);
+    lua_pushstring(L, "failed to create redirect binding");
+  } else {
+    lua_pushlstring(L, query.data, query.len);
+    lua_pushnil(L);
+    str_free(&query);
+  }
+  return 2;
+}
+
+
 static const struct luaL_Reg saml_funcs[] = {
   {"init", init},
   {"shutdown", shutdown},
+
+  {"base64_encode", base64_encode},
+  {"base64_decode", base64_decode},
+  {"uri_encode", uri_encode},
+  {"uri_decode", uri_decode},
 
   {"doc_read_memory", doc_read_memory},
   {"doc_read_file", doc_read_file},
@@ -726,6 +832,8 @@ static const struct luaL_Reg saml_funcs[] = {
   {"sign_xml", sign_xml},
   {"verify_binary", verify_binary},
   {"verify_doc", verify_doc},
+
+  {"binding_redirect_create", binding_redirect_create},
   {NULL, NULL}
 };
 

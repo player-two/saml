@@ -1,15 +1,7 @@
-local ffi = require "ffi"
-
-local _M = {}
-
-ffi.cdef([[
-typedef unsigned char xmlChar;
-const xmlChar xmlSecHrefRsaSha256[];
-const xmlChar xmlSecHrefRsaSha512[];
-]])
-local xmlsec = ffi.load("libxmlsec1")
-_M.xmlSecHrefRsaSha256 = ffi.string(xmlsec.xmlSecHrefRsaSha256)
-_M.xmlSecHrefRsaSha512 = ffi.string(xmlsec.xmlSecHrefRsaSha512)
+local _M = {
+  xmlSecHrefRsaSha256 = "http://www.w3.org/2001/04/xmldsig-more#rsa-sha256",
+  xmlSecHrefRsaSha512 = "http://www.w3.org/2001/04/xmldsig-more#rsa-sha512",
+}
 
 function _M.readfile(path)
   local file = io.open(path, "rb")

@@ -9,7 +9,6 @@
 #include "saml.h"
 
 #define URI_MAXLEN 4096
-#define INFLATED_MAXLEN 40960 // zlib compression ration is reasonable 2-5x; 10x the max uri length gives plenty of room
 
 char* USAGE = "\
 Usage: saml [command] [options]\n\

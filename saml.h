@@ -7,7 +7,6 @@
 #include <xmlsec/xmlsec.h>
 #include <xmlsec/transforms.h>
 
-
 const char* SAML_XMLNS_ASSERTION;
 const char* SAML_XMLNS_PROTOCOL;
 
@@ -18,6 +17,13 @@ const char* SAML_STATUS_SUCCESS;
 const char* SAML_STATUS_REQUESTER;
 const char* SAML_STATUS_RESPONDER;
 const char* SAML_STATUS_VERSION_MISMATCH;
+
+typedef unsigned char byte;
+
+typedef struct {
+  int len, total;
+  char* data;
+} str_t;
 
 typedef struct {
   int debug;
@@ -36,6 +42,13 @@ typedef struct {
   int num_values;
 } saml_attr_t;
 
+void str_free(str_t* str);
+
+char* saml_base64_encode(const byte* c, int len);
+int saml_base64_decode(const char* in, int in_len, byte** out, int* out_len);
+char* saml_uri_encode(const char* in);
+int saml_uri_decode(const char* in, char** out);
+
 int saml_init(saml_init_opts_t*);
 void saml_shutdown();
 
@@ -50,7 +63,7 @@ int saml_verify_binary(xmlSecKey* cert, xmlSecTransformId transform_id, unsigned
 int saml_sign_doc(xmlSecKey* key, xmlSecTransformId transform_id, xmlDoc* doc, saml_doc_opts_t* opts);
 int saml_verify_doc(xmlSecKeysMngr* mngr, xmlDoc* doc, saml_doc_opts_t* opts);
 
-int saml_binding_redirect_create(xmlSecKey* key, char* saml_type, char* content, char* sig_alg, char* relay_state);
+int saml_binding_redirect_create(xmlSecKey* key, char* saml_type, char* content, char* sig_alg, char* relay_state, str_t* query);
 int saml_binding_redirect_parse(char* content, char* sig_alg, xmlDoc** doc);
 int saml_binding_redirect_verify(xmlSecKey* cert, char* saml_type, char* content, char* sig_alg, char* relay_state, char* signature);
 #endif

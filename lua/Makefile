@@ -1,5 +1,6 @@
 -include common.mk # only the build and install targets require this
 
+LUA_INCDIR=/usr/include
 TEST_ARGS?=.
 
 .DEFAULT_GOAL: build
@@ -46,3 +47,15 @@ install: build
 	mkdir -p $(INST_LUADIR)/resty/saml
 	cp -R resty $(INST_LUADIR)
 	cp -R data $(INST_CONFDIR)
+
+.PHONY: build-local
+build-local: prepack
+	$(MAKE) -C .build build
+
+.PHONY: build-local
+test-local: build-local
+	(cd t && ROCK_DIR=$(HOME)/dev/saml/lua/.build ~/.luarocks/bin/busted --cpath `pwd`/../.build/?.so .)
+
+.PHONY: debug
+debug: build-local
+	LUA_CPATH=`pwd`/.build/?.so valgrind lua -l saml t/debug.lua

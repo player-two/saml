@@ -6,7 +6,7 @@ XMLSEC1_LIBDIR=/usr/local/lib
 CC=gcc
 CFLAGS=-g -fPIC
 XMLSEC1_CFLAGS=$(shell xmlsec1-config --cflags)
-CFLAGS_ALL=$(CFLAGS) -Wall -std=c99 -I$(LIBXML2_INCDIR) -I$(XMLSEC1_INCDIR) $(XMLSEC1_CFLAGS)
+CFLAGS_ALL=$(CFLAGS) -Wall -Werror -std=c99 -I$(LIBXML2_INCDIR) -I$(XMLSEC1_INCDIR) $(XMLSEC1_CFLAGS)
 LIBFLAG=-shared
 LDFLAGS=-g
 XMLSEC1_LDFLAGS=$(shell xmlsec1-config --libs)

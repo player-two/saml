@@ -7,7 +7,7 @@ describe("xml", function()
     local err = saml.init({ rock_dir=assert(os.getenv("ROCK_DIR")) })
     if err then print(err) assert(nil) end
 
-    response = assert(saml.doc_read_file("/t/data/response.xml"))
+    response = assert(saml.doc_read_file("data/response.xml"))
   end)
 
   teardown(function()

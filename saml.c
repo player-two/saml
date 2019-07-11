@@ -51,6 +51,7 @@ static void saml_log(char* msg) {
 }
 
 
+#include "str.c"
 #include "codecs.c"
 #include "xml.c"
 #include "sig.c"

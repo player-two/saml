@@ -4,7 +4,7 @@ local utils = require "utils"
 local function form_encode(params)
   local result = {}
   for k, v in pairs(params) do
-    table.insert(result, ngx.escape_uri(k) .. "=" .. ngx.escape_uri(v))
+    table.insert(result, saml.uri_encode(k) .. "=" .. saml.uri_encode(v))
   end
   return table.concat(result, "&")
 end
@@ -18,9 +18,9 @@ describe("saml integration", function()
     local err = saml.init({ rock_dir=assert(os.getenv("ROCK_DIR")) })
     if err then print(err) assert(nil) end
 
-    key_text = assert(utils.readfile("/t/data/sp.key"))
-    cert_text = assert(utils.readfile("/t/data/sp.crt"))
-    response = assert(utils.readfile("/t/data/response.xml"))
+    key_text = assert(utils.readfile("data/sp.key"))
+    cert_text = assert(utils.readfile("data/sp.crt"))
+    response = assert(utils.readfile("data/response.xml"))
   end)
 
   describe("can verify a document signed", function()
@@ -58,7 +58,7 @@ describe("saml integration", function()
 
     it("via xmlsec1", function()
       local name = os.tmpname()
-      local success, result_type, result_code = os.execute("xmlsec1 --sign --id-attr:ID urn:oasis:names:tc:SAML:2.0:protocol:Response --enabled-reference-uris same-doc --privkey-pem /t/data/sp.key,/t/data/sp.crt --output " .. name .. " /t/data/response-template.xml")
+      local success, result_type, result_code = os.execute("xmlsec1 --sign --id-attr:ID urn:oasis:names:tc:SAML:2.0:protocol:Response --enabled-reference-uris same-doc --privkey-pem data/sp.key,data/sp.crt --output " .. name .. " data/response-template.xml")
       assert.is_true(success)
       assert.are.equal(result_type, "exit")
       assert.are.equal(result_code, 0)
@@ -85,7 +85,7 @@ describe("saml integration", function()
 
     it("via #samltool", function()
       local body, code, headers, status = https.request("https://www.samltool.com/validate_response.php", form_encode({
-        xml = ngx.encode_base64(signed),
+        xml = saml.base64_encode(signed),
         idp_entityid = "http://idp.example.com/metadata.php",
         sp_entityid = "http://sp.example.com/demo1/metadata.php",
         acs_url = "http://sp.example.com/demo1/index.php?acs",
@@ -108,7 +108,7 @@ describe("saml integration", function()
 
     it("via xmlsec1", function()
       local name = utils.write_tmpfile(signed)
-      local success, result_type, result_code = os.execute("xmlsec1 --verify --id-attr:ID urn:oasis:names:tc:SAML:2.0:protocol:Response --enabled-reference-uris same-doc --pubkey-cert-pem /t/data/sp.crt " .. name .. " 2>/dev/null")
+      local success, result_type, result_code = os.execute("xmlsec1 --verify --id-attr:ID urn:oasis:names:tc:SAML:2.0:protocol:Response --enabled-reference-uris same-doc --pubkey-cert-pem data/sp.crt " .. name .. " 2>/dev/null")
       assert.are.equal("exit", result_type)
       assert.are.equal(0, result_code)
       assert.is_true(success)
@@ -117,20 +117,13 @@ describe("saml integration", function()
   end)
 
   describe("can create a redirect binding that is verified", function()
-    local binding
     local args = {}
 
     setup(function()
-      binding = require "resty.saml.binding"
-
       local key = assert(saml.key_read_memory(key_text, saml.KeyDataFormatPem))
-      local authn_request = assert(utils.readfile("/t/data/authn_request.xml"))
-      local query_string = assert(binding.create_redirect(key, {
-        SigAlg = "http://www.w3.org/2001/04/xmldsig-more#rsa-sha512",
-        SAMLRequest = authn_request,
-        RelayState = "/",
-      }))
-      for k, v in query_string:gmatch("&?([^=]+)=([^&]*)") do args[k] = ngx.unescape_uri(v) end
+      local authn_request = assert(utils.readfile("data/authn_request.xml"))
+      local query_string = assert(saml.binding_redirect_create(key, "SAMLRequest", authn_request, "http://www.w3.org/2001/04/xmldsig-more#rsa-sha512", "/"))
+      for k, v in query_string:gmatch("&?([^=]+)=([^&]*)") do args[k] = saml.uri_decode(v) end
     end)
 
     it("via #samltool", function()
