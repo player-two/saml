@@ -42,6 +42,24 @@ typedef struct {
   int num_values;
 } saml_attr_t;
 
+typedef enum {
+  SAML_ZLIB_ERROR = -2,
+  SAML_XMLSEC_ERROR,
+
+  SAML_OK,
+
+  SAML_NO_CONTENT,
+  SAML_NO_SIG_ALG,
+  SAML_NO_SIGNATURE,
+  SAML_BASE64,
+  SAML_INVALID_XML,
+  SAML_INVALID_DOC,
+  SAML_INVALID_SIG_ALG,
+  SAML_INVALID_SIGNATURE,
+} saml_binding_status_t;
+
+char* saml_binding_error_msg(saml_binding_status_t status);
+
 void str_free(str_t* str);
 
 char* saml_base64_encode(const byte* c, int len);

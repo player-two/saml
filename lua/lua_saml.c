@@ -788,14 +788,78 @@ static int binding_redirect_create(lua_State* L) {
   lua_pop(L, 5);
 
   str_t query;
-  if (saml_binding_redirect_create(key, saml_type, content, sig_alg, relay_state, &query) < 0) {
+  saml_binding_status_t res = saml_binding_redirect_create(key, saml_type, content, sig_alg, relay_state, &query);
+  if (res != SAML_OK) {
     lua_pushnil(L);
-    lua_pushstring(L, "failed to create redirect binding");
+    lua_pushstring(L, saml_binding_error_msg(res));
   } else {
     lua_pushlstring(L, query.data, query.len);
     lua_pushnil(L);
     str_free(&query);
   }
+  return 2;
+}
+
+
+static int binding_redirect_parse(lua_State* L) {
+  lua_settop(L, 3);
+
+  char* saml_type = (char*)luaL_checklstring(L, 1, NULL);
+
+  luaL_checktype(L, 2, LUA_TTABLE);
+  luaL_checktype(L, 3, LUA_TFUNCTION);
+
+  lua_getfield(L, 2, saml_type);
+  char* content = (char*)luaL_checkstring(L, 4);
+
+  lua_getfield(L, 2, "SigAlg");
+  char* sig_alg = (char*)lua_tostring(L, 5);
+
+  lua_getfield(L, 2, "Signature");
+  char* signature = (char*)lua_tostring(L, 6);
+
+  lua_getfield(L, 2, "RelayState");
+  char* relay_state = NULL;
+  if (!lua_isnil(L, 6)) {
+    relay_state = (char*)lua_tostring(L, 7);
+  }
+
+  // leave only the cert_from_doc function on the stack
+  lua_pop(L, 4);
+  lua_remove(L, 1);
+  lua_remove(L, 2);
+
+  xmlDoc* doc;
+  int res = saml_binding_redirect_parse(content, sig_alg, &doc);
+  if (res != SAML_OK) {
+    lua_pop(L, 1);
+    if (doc != NULL) {
+      lua_pushlightuserdata(L, (void*)doc);
+    } else {
+      lua_pushnil(L);
+    }
+    lua_pushstring(L, saml_binding_error_msg(res));
+    return 2;
+  }
+
+  lua_pushlightuserdata(L, (void*)doc);
+  lua_call(L, 1, 1);
+  xmlSecKey* cert = (xmlSecKey*)lua_touserdata(L, 1);
+  lua_pop(L, 1);
+
+  lua_pushlightuserdata(L, (void*)doc);
+  if (cert == NULL) {
+    lua_pushstring(L, "no cert");
+    return 2;
+  }
+
+  res = saml_binding_redirect_verify(cert, saml_type, content, sig_alg, relay_state, signature);
+  if (res != SAML_OK) {
+    lua_pushstring(L, saml_binding_error_msg(res));
+  } else {
+    lua_pushnil(L);
+  }
+
   return 2;
 }
 
@@ -834,6 +898,7 @@ static const struct luaL_Reg saml_funcs[] = {
   {"verify_doc", verify_doc},
 
   {"binding_redirect_create", binding_redirect_create},
+  {"binding_redirect_parse", binding_redirect_parse},
   {NULL, NULL}
 };
 

@@ -92,46 +92,9 @@ Parse a redirect binding
 ]]
 function _M.parse_redirect(saml_type, cert_from_doc)
   if ngx.req.get_method() ~= "GET" then return nil, nil, "method not allowed" end
-
   local args = ngx.req.get_uri_args()
-  local encoded_deflated = args[saml_type]
-  if not encoded_deflated then return nil, args, "no " .. saml_type end
-
-  if not args.SigAlg then return nil, args, "no SigAlg" end
-  local transform_id = saml.find_transform_by_href(args.SigAlg)
-  if not transform_id then return nil, "signature algorithm not found" end
-
-  if not args.Signature then return nil, args, "no Signature" end
-  local signature = ngx.decode_base64(args.Signature)
-  if not signature then return nil, args, "signature is not valid base64" end
-
-  local deflated = ngx.decode_base64(encoded_deflated)
-  if not deflated then return nil, args, saml_type .. " is not valid base64" end
-  local ok, xml_str = pcall(zlib.inflate(_WINDOW_BITS), deflated)
-  if not ok then return nil, args, saml_type .. " is not valid compresssion format" end
-
-  local doc = saml.doc_read_memory(xml_str)
-  if doc == nil then return nil, args, saml_type .. " is not valid xml" end
-
-  local ok = saml.doc_validate(doc)
-  if not ok then return doc, args, "document does not validate against schema" end
-
-  local cert = cert_from_doc(doc)
-  if not cert then return doc, args, "no cert" end
-
-  --local valid, err = saml.binding_redirect_verify(cert, saml_type, encoded_deflated, args.RelayState, args.SigAlg, signature)
-  local sig_input = saml_type .. "=" .. ngx.escape_uri(encoded_deflated)
-  if args.RelayState then
-    sig_input = sig_input .. "&RelayState=" .. ngx.escape_uri(args.RelayState)
-  end
-  sig_input = sig_input .. "&SigAlg=" .. ngx.escape_uri(args.SigAlg)
-
-  local valid, err = saml.verify_binary(cert, transform_id, sig_input, signature)
-  --]]
-  if err then return doc, args, err end
-  if not valid then return doc, args, "invalid signature" end
-
-  return doc, args, nil
+  local doc, err = saml.binding_redirect_parse(saml_type, args, cert_from_doc)
+  return doc, args, err
 end
 
 --[[---
