@@ -32,11 +32,11 @@ static void redirect_concat_args(char* saml_type, char* content, char* sig_alg, 
   str_cat(query, content_uri, strlen(content_uri));
   if (relay_state != NULL) {
     char* relay_state_uri = saml_uri_encode(relay_state);
-    str_cat(query, "&RelayState=", sizeof("&RelayState="));
+    str_cat(query, "&RelayState=", sizeof("&RelayState=") - 1);
     str_cat(query, relay_state_uri, strlen(relay_state_uri));
     free(relay_state_uri);
   }
-  str_cat(query, "&SigAlg=", sizeof("&SigAlg="));
+  str_cat(query, "&SigAlg=", sizeof("&SigAlg=") - 1);
   str_cat(query, sig_alg_uri, strlen(sig_alg_uri));
 
   free(content_uri);
@@ -84,7 +84,7 @@ saml_binding_status_t saml_binding_redirect_create(xmlSecKey* key, char* saml_ty
   char* sig_encoded = saml_base64_encode(xmlSecBufferGetData(ctx->result), xmlSecBufferGetSize(ctx->result));
   xmlSecTransformCtxDestroy(ctx);
   char* sig_uri = saml_uri_encode(sig_encoded);
-  str_cat(query, "&Signature=", sizeof("&Signature="));
+  str_cat(query, "&Signature=", sizeof("&Signature=") - 1);
   str_cat(query, sig_uri, strlen(sig_uri));
   free(sig_uri);
 
