@@ -52,6 +52,7 @@ typedef enum {
   SAML_NO_SIG_ALG,
   SAML_NO_SIGNATURE,
   SAML_BASE64,
+  SAML_INVALID_COMPRESSION,
   SAML_INVALID_XML,
   SAML_INVALID_DOC,
   SAML_INVALID_SIG_ALG,
@@ -60,7 +61,11 @@ typedef enum {
 
 char* saml_binding_error_msg(saml_binding_status_t status);
 
+void str_init(str_t* str, int total);
 void str_free(str_t* str);
+void str_grow(str_t* str);
+void str_cat(str_t* str, const char* data, int len);
+void str_append(str_t* str, char c);
 
 char* saml_base64_encode(const byte* c, int len);
 int saml_base64_decode(const char* in, int in_len, byte** out, int* out_len);

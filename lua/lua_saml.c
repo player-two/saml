@@ -827,9 +827,9 @@ static int binding_redirect_parse(lua_State* L) {
   // leave only the cert_from_doc function on the stack
   lua_pop(L, 4);
   lua_remove(L, 1);
-  lua_remove(L, 2);
+  lua_remove(L, 1);
 
-  xmlDoc* doc;
+  xmlDoc* doc = NULL;
   int res = saml_binding_redirect_parse(content, sig_alg, &doc);
   if (res != SAML_OK) {
     lua_pop(L, 1);

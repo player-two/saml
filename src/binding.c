@@ -12,6 +12,7 @@ static char* SAML_BINDING_ERRORS[] = {
   "no SigAlg",
   "no Signature",
   "invalid base64 content",
+  "data not in zlib format",
   "content is not valid xml",
   "document does not validate against schema",
   "invalid signature algorithm",
@@ -133,7 +134,10 @@ saml_binding_status_t saml_binding_redirect_parse(char* content, char* sig_alg, 
     xml.len = stream.total_out;
     if (zlib_res == Z_BUF_ERROR && stream.avail_out == 0) {
       str_grow(&xml);
-    } else if (zlib_res == Z_STREAM_ERROR || zlib_res == Z_DATA_ERROR || zlib_res == Z_MEM_ERROR || zlib_res == Z_NEED_DICT) {
+    } else if (zlib_res == Z_BUF_ERROR || zlib_res == Z_DATA_ERROR) {
+      inflateEnd(&stream);
+      return SAML_INVALID_COMPRESSION;
+    } else if (zlib_res != Z_OK && zlib_res != Z_STREAM_END) {
       inflateEnd(&stream);
       return SAML_ZLIB_ERROR;
     }
@@ -177,7 +181,13 @@ saml_binding_status_t saml_binding_redirect_verify(xmlSecKey* cert, char* saml_t
 
   int res = saml_verify_binary(cert, transform_id, (unsigned char*)query.data, query.len, sig, sig_len);
   str_free(&query);
-  return res < 0 ? SAML_INVALID_SIGNATURE : SAML_OK;
+  if (res < 0) {
+    return SAML_XMLSEC_ERROR;
+  } else if (res == 0) {
+    return SAML_OK;
+  } else {
+    return SAML_INVALID_SIGNATURE;
+  }
 }
 
 int saml_binding_post_create(xmlSecKey* key, char* saml_type, char* content, char* sig_alg, char* relay_state) {
