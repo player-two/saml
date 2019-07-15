@@ -13,6 +13,7 @@
 char* USAGE = "\
 Usage: saml [command] [options]\n\
 Commands:\n\
+  create-redirect cert-file sig-alg [relay-state] xml|-\n\
   verify-redirect cert-file\n\
     Verify a redirect binding is correctly formatted and signed\n\
 \n";
@@ -142,6 +143,49 @@ char* uri_args_serialize(uri_arg_t* arg) {
   return out;
 }
 
+int create_redirect(char* args[], int args_len) {
+  if (args_len < 2) {
+    fprintf(stderr, "not enough arguments\n");
+    return 1;
+  } else if (args_len > 4) {
+    fprintf(stderr, "too many arguments\n");
+    return 1;
+  }
+
+  xmlSecKey* key = xmlSecCryptoAppKeyLoad(args[0], xmlSecKeyDataFormatPem, NULL, NULL, NULL);
+  if (key == NULL) {
+    fprintf(stderr, "could not load key from %s\n", args[0]);
+    return 1;
+  }
+
+  char* relay_state = args_len == 4 ? args[2] : NULL;
+
+  str_t content;
+  str_init(&content, 1024);
+  FILE* f = fopen(args_len == 4 ? args[3] : args[2], "r");
+  size_t read_len = fread((void*)content.data, sizeof(char), content.total, f);
+  content.len = read_len;
+  while (read_len != 0) {
+    str_grow(&content);
+    read_len = fread((void*)content.data + content.len, sizeof(char), content.total - content.len, f);
+  }
+  fclose(f);
+  str_append(&content, '\0');
+
+  str_t query;
+  saml_binding_status_t res = saml_binding_redirect_create(key, "SAMLRequest", content.data, args[1], relay_state, &query);
+  str_free(&content);
+  if (res != SAML_OK) {
+    fprintf(stderr, "%s\n", saml_binding_error_msg(res));
+    str_free(&query);
+    return 1;
+  } else {
+    fprintf(stderr, "%*s\n", query.len, query.data);
+    str_free(&query);
+    return 0;
+  }
+}
+
 int verify_redirect(char* args[], int args_len) {
   if (args_len < 1) {
     fprintf(stderr, "not enough arguments\n");
@@ -259,7 +303,9 @@ int main(int argc, char* argv[]) {
   }
 
   int res;
-  if (strncmp(argv[1], "verify-redirect", sizeof("verify-redirect")) == 0) {
+  if (strncmp(argv[1], "create-redirect", sizeof("create-redirect")) == 0) {
+    return create_redirect(argv + 2, argc - 2);
+  } else if (strncmp(argv[1], "verify-redirect", sizeof("verify-redirect")) == 0) {
     res = verify_redirect(argv + 2, argc - 2);
     if (res == 0) {
       puts("redirect binding is valid");
