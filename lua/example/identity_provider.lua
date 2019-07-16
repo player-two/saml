@@ -3,7 +3,7 @@ local utils = require "utils"
 
 local _M = {}
 
-local RSA_SHA_512_TRANSFORM = assert(saml.find_transform_by_href("http://www.w3.org/2001/04/xmldsig-more#rsa-sha512"))
+local RSA_SHA_512 = "http://www.w3.org/2001/04/xmldsig-more#rsa-sha512"
 
 local SIGNING_KEY = assert(saml.key_read_file("/ssl/idp.key", saml.KeyDataFormatPem))
 local SIGNING_CERT = assert(saml.key_read_file("/ssl/idp.crt", saml.KeyDataFormatCertPem))
@@ -93,10 +93,7 @@ function _M:sso(relay_state)
 
   local dest = SP_URI .. "/acs"
 
-  local body, err = saml.binding.create_post(SIGNING_KEY, RSA_SHA_512_TRANSFORM, dest, {
-    SAMLResponse = response(dest, request_id, status),
-    RelayState = args.RelayState
-  })
+  local body, err = saml.binding.create_post(SIGNING_KEY, "SAMLResponse", response(dest, request_id, status), RSA_SHA_512, args.RelayState, dest)
   if err then
     ngx.log(ngx.ERR, err)
     ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
@@ -127,12 +124,9 @@ function _M:sls(relay_state)
     status = saml.STATUS_CODES_SUCCESS
   end
 
-  local dest = SP_URI .. "/acs"
+  local dest = SP_URI .. "/sls"
 
-  local body, err = saml.binding.create_post(SIGNING_KEY, RSA_SHA_512_TRANSFORM, dest, {
-    SAMLResponse = logout_response(dest, request_id, status),
-    RelayState = args.RelayState
-  })
+  local body, err = saml.binding.create_post(SIGNING_KEY, "SAMLResponse", logout_response(dest, request_id, status), RSA_SHA_512, args.RelayState, dest)
   if err then
     ngx.log(ngx.ERR, err)
     ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)

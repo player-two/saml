@@ -247,9 +247,7 @@ saml_binding_status_t saml_binding_post_create(xmlSecKey* key, char* saml_type, 
   xmlFree(doc);
 
   char* result = saml_base64_encode((byte*)buf, buf_len);
-  char* result_uri = saml_uri_encode(result);
   xmlFree(buf);
-  free(result);
 
   str_init(html, 1024);
   str_cat(html, FORM_PRE, sizeof(FORM_PRE) - 1);
@@ -258,16 +256,14 @@ saml_binding_status_t saml_binding_post_create(xmlSecKey* key, char* saml_type, 
   str_cat(html, FORM_INPUT_NAME, sizeof(FORM_INPUT_NAME) - 1);
   str_cat(html, saml_type, strlen(saml_type));
   str_cat(html, FORM_INPUT_VALUE, sizeof(FORM_INPUT_VALUE) - 1);
-  str_cat(html, result_uri, strlen(result_uri));
-  free(result_uri);
+  str_cat(html, result, strlen(result));
+  free(result);
 
   if (relay_state != NULL) {
-    char* relay_state_uri = saml_uri_encode(relay_state);
     str_cat(html, FORM_INPUT_NAME, sizeof(FORM_INPUT_NAME) - 1);
     str_cat(html, "RelayState", sizeof("RelayState") - 1);
     str_cat(html, FORM_INPUT_VALUE, sizeof(FORM_INPUT_VALUE) - 1);
-    str_cat(html, relay_state_uri, strlen(relay_state_uri));
-    free(relay_state_uri);
+    str_cat(html, relay_state, strlen(relay_state));
   }
   str_cat(html, FORM_POST, sizeof(FORM_POST) - 1);
 

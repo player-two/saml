@@ -219,10 +219,37 @@ static int doc_validate(lua_State* L) {
 
 
 /***
-Get the ID of the root element in the document
-@function doc_validate
+Get the name of the root element in the document
+@function doc_root_name
 @tparam xmlDoc* doc
-@treturn ?string error
+@treturn ?string name
+*/
+static int doc_root_name(lua_State* L) {
+  lua_settop(L, 1);
+  xmlDoc* doc = (xmlDoc*)lua_touserdata(L, 1);
+  luaL_argcheck(L, doc != NULL, 1, "`xmlDoc*' expected");
+  lua_pop(L, 1);
+
+  xmlNode* root = xmlDocGetRootElement(doc);
+  if (root == NULL) {
+    lua_pushnil(L);
+    return 1;
+  }
+
+  if (root->name == NULL) {
+    lua_pushnil(L);
+  } else {
+    lua_pushstring(L, (char*)root->name);
+  }
+  return 1;
+}
+
+
+/***
+Get the ID of the root element in the document
+@function doc_id
+@tparam xmlDoc* doc
+@treturn ?string id
 */
 static int doc_id(lua_State* L) {
   lua_settop(L, 1);
@@ -954,6 +981,7 @@ static const struct luaL_Reg saml_funcs[] = {
   {"doc_free", doc_free},
   {"doc_validate", doc_validate},
 
+  {"doc_root_name", doc_root_name},
   {"doc_id", doc_id},
   {"doc_issuer", doc_issuer},
   {"doc_session_index", doc_session_index},

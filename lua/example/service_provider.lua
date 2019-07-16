@@ -49,10 +49,10 @@ end
 
 local LOGOUT_REQUEST = [[
 <?xml version="1.0"?>
-<samlp:LogoutRequest xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion" xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol" Version="2.0" ID="{* id *}" IssueInstant="{* issue_instant *}" Destination="{* destination *}">
-  <saml:Issuer Format="urn:oasis:names:tc:SAML:2.0:nameid-format:entity">{* issuer *}</saml:Issuer>
-  <saml:NameID NameQualifier="{* name_qualifier *}" SPNameQualifier="{* sp_name_qualifier *}" Format="urn:oasis:names:tc:SAML:2.0:nameid-format:persistent">{* name_id *}</saml:NameID>
-  <samlp:SessionIndex>{* session_index *}</samlp:SessionIndex>
+<samlp:LogoutRequest xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion" xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol" Version="2.0" ID="${id}" IssueInstant="${issue_instant}" Destination="${destination}">
+  <saml:Issuer Format="urn:oasis:names:tc:SAML:2.0:nameid-format:entity">${issuer}</saml:Issuer>
+  <saml:NameID NameQualifier="${name_qualifier}" SPNameQualifier="${sp_name_qualifier}" Format="urn:oasis:names:tc:SAML:2.0:nameid-format:persistent">${name_id}</saml:NameID>
+  <samlp:SessionIndex>${session_index}</samlp:SessionIndex>
 </samlp:LogoutRequest>
 ]]
 
@@ -136,23 +136,41 @@ end
 function _M.sls()
   local doc, args, err = saml.binding.parse_post("SAMLResponse", key_mngr_from_doc)
 
-  local request_id = ""
-  if doc then
-    request_id = saml.doc_id(doc)
-    saml.doc_free(doc)
-  end
-
-  local status
-  if err then
+  if not doc then
     ngx.log(ngx.WARN, err)
-    status = saml.STATUS_CODES_REQUESTER
-  else
-    status = saml.STATUS_CODES_SUCCESS
+    ngx.exit(ngx.HTTP_BAD_REQUEST)
   end
 
-  ngx.header["Set-Cookie"] = "username=; Max-Age=0"
-  ngx.say(logout_response(request_id, saml.STATUS_CODES_SUCCESS))
-  ngx.exit(ngx.HTTP_OK)
+  local name = saml.doc_root_name(doc)
+  if not name then
+    ngx.log(ngx.WARN, "no name")
+    ngx.exit(ngx.HTTP_BAD_REQUEST)
+  end
+
+  if name == "LogoutRequest" then
+    local request_id = ""
+    if doc then
+      request_id = saml.doc_id(doc)
+      saml.doc_free(doc)
+    end
+
+    local status
+    if err then
+      ngx.log(ngx.WARN, err)
+      status = saml.STATUS_CODES_REQUESTER
+    else
+      status = saml.STATUS_CODES_SUCCESS
+    end
+
+    ngx.header["Set-Cookie"] = "username=; Max-Age=0"
+    ngx.say(logout_response(request_id, saml.STATUS_CODES_SUCCESS))
+    ngx.exit(ngx.HTTP_OK)
+  else
+    ngx.status = ngx.HTTP_MOVED_TEMPORARILY
+    ngx.header.location = "/"
+    ngx.header["Set-Cookie"] = "username=; Max-Age=0"
+    ngx.exit(ngx.HTTP_OK)
+  end
 end
 
 function _M.logout()
@@ -172,9 +190,10 @@ function _M.logout()
   end
 
   ngx.status = ngx.HTTP_MOVED_TEMPORARILY
+  ngx.header["Set-Cookie"] = "username=; Max-Age=0"
   ngx.header.cache_control = "no-cache, no-store"
   ngx.header.pragma = "no-cache"
-  ngx.header.location = IDP_URI .. "/slo?" .. query_str
+  ngx.header.location = IDP_URI .. "/sls?" .. query_str
   ngx.exit(ngx.HTTP_OK)
 end
 
