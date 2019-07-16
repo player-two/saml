@@ -27,7 +27,7 @@ typedef struct {
 
 typedef struct {
   int debug;
-  const char* rock_dir;
+  const char* data_dir;
 } saml_init_opts_t;
 
 typedef struct {

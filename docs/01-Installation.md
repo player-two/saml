@@ -31,7 +31,7 @@ luarocks install saml
 
 ```bash
 git clone https://github.com/megalord/saml && cd saml
-make install INST_LIBDIR=<lua cpath> INST_LUADIR=<lua path> INST_CONFDIR=<rock_dir>
+make install INST_LIBDIR=<lua cpath> INST_LUADIR=<lua path> INST_CONFDIR=<data_dir>
 ```
 
 The `path` and `cpath` can be found via
@@ -39,7 +39,7 @@ The `path` and `cpath` can be found via
 lua -e 'print("path: " .. package.path); print("cpath: " .. package.cpath)'
 ```
 
-The `rock_dir` can be anything, and whatever it is should be passed to `saml.init`.
+The `data_dir` can be anything, and whatever it is should be passed to `saml.init`.
 
 ## Initialization
 
@@ -53,7 +53,7 @@ Optional boolean, defaults to false
 
 Set this to true for extra debugging information to be sent to stderr.  This information can come from libxml2, xmlsec1, and this library, so it can get a bit noisy.  It is often most helpful when troubleshooting signature or document parsing errors.
 
-### rock_dir
+### data_dir
 
 Required string
 

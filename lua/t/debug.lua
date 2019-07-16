@@ -1,7 +1,7 @@
 -- Scratch pad for narrowing the cause of a specific error
 local utils = require "t.utils"
 
-saml.init({ debug=true, rock_dir=".." })
+saml.init({ debug=true, data_dir="../data/" })
 
 local key = assert(saml.key_read_file("t/data/sp.key", saml.KeyDataFormatPem))
 local authn_request = assert(utils.readfile("t/data/authn_request.xml"))

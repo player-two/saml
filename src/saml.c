@@ -24,7 +24,7 @@
 
 #include "saml.h"
 
-static const char* XSD_MAIN = "/data/xsd/saml-schema-protocol-2.0.xsd";
+static const char* XSD_MAIN = "/xsd/saml-schema-protocol-2.0.xsd";
 static xmlXPathCompExpr *XPATH_ATTRIBUTES, *XPATH_SESSION_INDEX;
 static xmlSchemaValidCtxt* XML_SCHEMA_VALIDATE_CTX;
 
@@ -71,15 +71,15 @@ int saml_init(saml_init_opts_t* opts) {
   }
 
   char data_dir[256];
-  int rock_dir_len = strlen(opts->rock_dir);
+  int data_dir_len = strlen(opts->data_dir);
   int xsd_main_len = strlen(XSD_MAIN);
-  if (rock_dir_len > sizeof(data_dir) - xsd_main_len - 1) {
-    saml_log("rock_dir path is too long");
+  if (data_dir_len > sizeof(data_dir) - xsd_main_len - 1) {
+    saml_log("data_dir path is too long");
     return -1;
   }
-  memcpy(data_dir, opts->rock_dir, rock_dir_len);
-  memcpy(data_dir + rock_dir_len, XSD_MAIN, xsd_main_len);
-  data_dir[rock_dir_len + xsd_main_len] = '\0';
+  memcpy(data_dir, opts->data_dir, data_dir_len);
+  memcpy(data_dir + data_dir_len, XSD_MAIN, xsd_main_len);
+  data_dir[data_dir_len + xsd_main_len] = '\0';
 
   xmlSchemaParserCtxt* parser_ctx = xmlSchemaNewParserCtxt(data_dir);
   if (parser_ctx == NULL) {

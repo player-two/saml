@@ -27,12 +27,12 @@ static int init(lua_State* L) {
   lua_settop(L, 1);
   luaL_checktype(L, 1, LUA_TTABLE);
   lua_getfield(L, 1, "debug");
-  lua_getfield(L, 1, "rock_dir");
+  lua_getfield(L, 1, "data_dir");
 
   saml_init_opts_t opts;
   luaL_argcheck(L, lua_isboolean(L, 2) || lua_isnil(L, 2), 2, "debug must be a boolean");
   opts.debug = lua_toboolean(L, 2);
-  opts.rock_dir = luaL_checklstring(L, 3, NULL);
+  opts.data_dir = luaL_checklstring(L, 3, NULL);
   lua_pop(L, 2);
 
   if (saml_init(&opts) < 0) {

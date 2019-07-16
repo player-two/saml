@@ -337,13 +337,13 @@ int main(int argc, char* argv[]) {
     return 1;
   }
 
-  char rock_dir[120];
-  if (getcwd(rock_dir, sizeof(rock_dir)) == NULL) {
+  char data_dir[120];
+  if (getcwd(data_dir, sizeof(data_dir)) == NULL) {
     fprintf(stderr, "getcwd failed\n");
     return 1;
   }
 
-  saml_init_opts_t opts = (saml_init_opts_t){ .debug = 0, .rock_dir = rock_dir };
+  saml_init_opts_t opts = (saml_init_opts_t){ .debug = 0, .data_dir = data_dir };
   if (saml_init(&opts) < 0) {
     fprintf(stderr, "initialization failed\n");
     return 1;

@@ -17,7 +17,7 @@ test: prepack
 		-v `pwd`/.build:/tmp/.build \
 		-v `pwd`/t:/t \
 		-w /t \
-		-e ROCK_DIR=/usr/local/openresty/luajit/lib/luarocks/rocks/saml/dev-1/ \
+		-e DATA_DIR=/usr/local/openresty/luajit/lib/luarocks/rocks/saml/dev-1/data/ \
 		resty-saml-test:latest \
 		bash -c "cd /tmp/.build && luarocks make && cd /t && busted --lua=/usr/local/openresty/bin/resty -lpath /usr/local/openresty/lualib/?.lua -cpath /usr/local/openresty/lualib/?.so $(TEST_ARGS)"
 
@@ -54,7 +54,7 @@ build-local: prepack
 
 .PHONY: build-local
 test-local: build-local
-	(cd t && ROCK_DIR=$(HOME)/dev/saml/lua/.build ~/.luarocks/bin/busted --cpath `pwd`/../.build/?.so .)
+	(cd t && DATA_DIR=$(HOME)/dev/saml/lua/.build/data/ ~/.luarocks/bin/busted --cpath `pwd`/../.build/?.so .)
 
 .PHONY: debug
 debug: build-local

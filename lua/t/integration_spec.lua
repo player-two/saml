@@ -15,7 +15,7 @@ describe("saml integration", function()
   setup(function()
     saml = require "saml"
 
-    local err = saml.init({ rock_dir=assert(os.getenv("ROCK_DIR")) })
+    local err = saml.init({ data_dir=assert(os.getenv("DATA_DIR")) })
     if err then print(err) assert(nil) end
 
     key_text = assert(utils.readfile("data/sp.key"))

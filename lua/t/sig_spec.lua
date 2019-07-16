@@ -11,7 +11,7 @@ describe("sig", function()
   setup(function()
     saml = require "saml"
 
-    local err = saml.init({ debug=true, rock_dir=assert(os.getenv("ROCK_DIR")) })
+    local err = saml.init({ debug=true, data_dir=assert(os.getenv("DATA_DIR")) })
     if err then print(err) assert(nil) end
 
     key = assert(saml.key_read_file("data/sp.key", saml.KeyDataFormatPem))
