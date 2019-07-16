@@ -864,6 +864,81 @@ static int binding_redirect_parse(lua_State* L) {
 }
 
 
+static int binding_post_create(lua_State* L) {
+  lua_settop(L, 6);
+
+  xmlSecKey* key = (xmlSecKey*)lua_touserdata(L, 1);
+  luaL_argcheck(L, key != NULL, 1, "`xmlSecKey*' expected");
+
+  char* saml_type = (char*)luaL_checklstring(L, 2, NULL);
+  char* content = (char*)luaL_checklstring(L, 3, NULL);
+  char* sig_alg = (char*)luaL_checklstring(L, 4, NULL);
+  char* relay_state = NULL;
+  if (!lua_isnil(L, 5)) {
+    relay_state = (char*)luaL_checklstring(L, 5, NULL);
+  }
+  char* destination = (char*)luaL_checklstring(L, 6, NULL);
+  lua_pop(L, 6);
+
+  str_t html;
+  saml_binding_status_t res = saml_binding_post_create(key, saml_type, content, sig_alg, relay_state, destination, &html);
+  if (res != SAML_OK) {
+    lua_pushnil(L);
+    lua_pushstring(L, saml_binding_error_msg(res));
+  } else {
+    lua_pushlstring(L, html.data, html.len);
+    lua_pushnil(L);
+    str_free(&html);
+  }
+  return 2;
+}
+
+
+static int binding_post_parse(lua_State* L) {
+  lua_settop(L, 2);
+
+  char* content = (char*)luaL_checklstring(L, 1, NULL);
+  luaL_checktype(L, 2, LUA_TFUNCTION);
+
+  lua_remove(L, 1);
+
+  xmlDoc* doc = NULL;
+  saml_binding_status_t res = saml_binding_post_parse(content, &doc);
+  if (res != SAML_OK) {
+    lua_pop(L, 1);
+    if (doc != NULL) {
+      lua_pushlightuserdata(L, (void*)doc);
+    } else {
+      lua_pushnil(L);
+    }
+    lua_pushstring(L, saml_binding_error_msg(res));
+    return 2;
+  }
+
+  lua_pushlightuserdata(L, (void*)doc);
+  lua_call(L, 1, 1);
+  xmlSecKeysMngr* mngr = (xmlSecKeysMngr*)lua_touserdata(L, 1);
+  lua_pop(L, 1);
+
+  lua_pushlightuserdata(L, (void*)doc);
+  if (mngr == NULL) {
+    lua_pushstring(L, "no cert");
+    return 2;
+  }
+
+  res = saml_binding_post_verify(mngr, doc);
+
+  if (res != SAML_OK) {
+    lua_pushstring(L, saml_binding_error_msg(res));
+  } else {
+    lua_pushnil(L);
+  }
+
+  return 2;
+}
+
+
+
 static const struct luaL_Reg saml_funcs[] = {
   {"init", init},
   {"shutdown", shutdown},
@@ -899,6 +974,8 @@ static const struct luaL_Reg saml_funcs[] = {
 
   {"binding_redirect_create", binding_redirect_create},
   {"binding_redirect_parse", binding_redirect_parse},
+  {"binding_post_create", binding_post_create},
+  {"binding_post_parse", binding_post_parse},
   {NULL, NULL}
 };
 

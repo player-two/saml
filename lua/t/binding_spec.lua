@@ -146,86 +146,54 @@ describe("binding", function()
 
   end)
 
-  --[[
   describe(".create_post()", function()
 
-    before_each(function()
-      saml.sign_xml.returns("signed request", nil)
-    end)
-
-    it("signs a request", function()
-      binding.create_post("key", utils.xmlSecHrefRsaSha512, "dest", { SAMLRequest = "request" })
-      assert.spy(saml.sign_xml).was.called_with("key", utils.xmlSecHrefRsaSha512, "request", match.is_table())
-    end)
-
-    it("signs a response", function()
-      binding.create_post("key", utils.xmlSecHrefRsaSha512, "dest", { SAMLResponse = "response" })
-      assert.spy(saml.sign_xml).was.called_with("key", utils.xmlSecHrefRsaSha512, "response", match.is_table())
-    end)
-
-    it("aborts without a request or response", function()
-      assert.has_error(function()
-        binding.create_post("key", utils.xmlSecHrefRsaSha512, "dest", {})
-      end, "no saml request or response")
-    end)
-
-    it("errors for signature failure", function()
-      saml.sign_xml.returns(nil, "signature failed")
-      local html, err = binding.create_post("key", utils.xmlSecHrefRsaSha512, "dest", { SAMLRequest = "request" })
-      assert.are.equal("signature failed", err)
+    it("errors for bad sig algorithm", function()
+      local html, err = binding.create_post(key, "SAMLRequest", "xml", "rsa", "/", "dest")
+      assert.are.equal("invalid signature algorithm", err)
       assert.is_nil(html)
     end)
 
-    it("passes the destination", function()
-      local html, err = binding.create_post("key", utils.xmlSecHrefRsaSha512, "dest", { SAMLRequest = "request" })
-      assert.is_nil(err)
-      local action = html:match('action="(%w+)"')
-      assert.are.equal("dest", action)
+    it("errors for bad xml", function()
+      local html, err = binding.create_post(key, "SAMLRequest", "xml", utils.xmlSecHrefRsaSha512, "/", "dest")
+      assert.are.equal("content is not valid xml", err)
+      assert.is_nil(html)
     end)
 
-    it("passes a copy of the params", function()
-      local params = { SAMLRequest = "request", RelayState = "relay" }
-      local html, err = binding.create_post("key", utils.xmlSecHrefRsaSha512, "dest", params)
-      assert.is_nil(err)
-      assert.are.same({
-        SAMLRequest = "request",
-        RelayState = "relay",
-      }, params)
+    it("errors for bad document", function()
+      local html, err = binding.create_post(key, "SAMLRequest", "<samlp:AuthnRequest xmlns:samlp=\"urn:oasis:names:tc:SAML:2.0:protocol\" xmlns:saml=\"urn:oasis:names:tc:SAML:2.0:assertion\" ID=\"ONELOGIN_809707f0030a5d00620c9d9df97f627afe9dcc24\" Version=\"2.0\" ProviderName=\"SP test\" IssueInstant=\"2014-07-16T23:52:45Z\" Destination=\"http://idp.example.com/SSOService.php\" ProtocolBinding=\"urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST\" AssertionConsumerServiceURL=\"http://sp.example.com/demo1/index.php?acs\"></samlp:AuthnRequest>", utils.xmlSecHrefRsaSha512, "/", "dest")
+      assert.are.equal("document does not validate against schema", err)
+      assert.is_nil(html)
     end)
 
     it("returns the form template", function()
-      local html, err = binding.create_post("key", utils.xmlSecHrefRsaSha512, "dest", { SAMLRequest = "request" })
-      assert.is_nil(err)
-      assert.is_not_nil(html:find("<html>"))
-
-      local name, value = html:match('name="([^"]+)" value="([^"]+)"')
-      assert.are.equal("SAMLRequest", name)
-      assert.are.equal("c2lnbmVkIHJlcXVlc3Q=", value)
+      local html, err = binding.create_post(key, "SAMLRequest", "request", utils.xmlSecHrefRsaSha512, "/", "dest")
     end)
 
   end)
 
 
   describe(".parse_post()", function()
-    local input_doc = "<Response>"
-    local parsed = "parsed document"
-    local mngr = { cert = "" }
+    local mngr, post_args, response
     local cb = function(doc) return mngr end
     local cb_error = function(doc) return nil end
-    local default_args = { SAMLRequest = "PFJlc3BvbnNlPg==" }
+
+    setup(function()
+      response = assert(utils.readfile("data/response-signed.xml.b64"))
+      mngr = saml.create_keys_manager({ cert })
+    end)
 
     before_each(function()
+      post_args = {
+        SAMLResponse = response
+      }
       ngx.req.get_method.returns("POST")
-      ngx.req.get_post_args.returns(default_args, nil)
-      saml.create_keys_manager.returns(mngr)
-      saml.verify_doc.returns(true, nil)
-      saml.doc_read_memory.returns(parsed)
-      saml.doc_validate.returns(true)
+      ngx.req.get_post_args.returns(post_args, nil)
     end)
 
     it("errors for non-POST method", function()
       ngx.req.get_method.returns("GET")
-      local doc, args, err = binding.parse_post("SAMLRequest", cb_error)
+      local doc, args, err = binding.parse_post("SAMLResponse", cb_error)
       assert.are.equal("method not allowed", err)
       assert.is_nil(doc)
       assert.is_nil(args)
@@ -233,71 +201,59 @@ describe("binding", function()
 
     it("errors for argument retrieval", function()
       ngx.req.get_post_args.returns(nil, "bad request body")
-      local doc, args, err = binding.parse_post("SAMLRequest", cb_error)
+      local doc, args, err = binding.parse_post("SAMLResponse", cb_error)
       assert.are.equal("bad request body", err)
       assert.is_nil(doc)
       assert.is_nil(args)
     end)
 
     it("errors for missing content", function()
-      ngx.req.get_post_args.returns({}, nil)
       local doc, args, err = binding.parse_post("SAMLRequest", cb_error)
       assert.are.equal("no SAMLRequest", err)
       assert.is_nil(doc)
-      assert.are.same({}, args)
+      assert.are.same(post_args, args)
+    end)
+
+    it("errors for invalid base64 content", function()
+      post_args.SAMLResponse = "xml"
+      local doc, args, err = binding.parse_post("SAMLResponse", cb_error)
+      assert.are.equal("invalid base64 content", err)
+      assert.is_nil(doc)
+      assert.are.same(post_args, args)
     end)
 
     it("errors for invalid xml", function()
-      saml.doc_read_memory.returns(nil)
-      local doc, args, err = binding.parse_post("SAMLRequest", cb_error)
-      assert.spy(saml.doc_read_memory).was.called_with("<Response>")
-      assert.are.equal("SAMLRequest is not valid xml", err)
+      post_args.SAMLResponse = saml.base64_encode("xml")
+      local doc, args, err = binding.parse_post("SAMLResponse", cb_error)
+      assert.are.equal("content is not valid xml", err)
       assert.is_nil(doc)
-      assert.are.same(default_args, args)
+      assert.are.same(post_args, args)
     end)
 
     it("errors for invalid document", function()
-      saml.doc_validate.returns(false)
-      local doc, args, err = binding.parse_post("SAMLRequest", cb_error)
+      post_args.SAMLResponse = saml.base64_encode("<samlp:Response xmlns:samlp=\"urn:oasis:names:tc:SAML:2.0:protocol\" xmlns:saml=\"urn:oasis:names:tc:SAML:2.0:assertion\" ID=\"_8e8dc5f69a98cc4c1ff3427e5ce34606fd672f91e6\" Version=\"2.0\" IssueInstant=\"2014-07-17T01:01:48Z\" Destination=\"http://sp.example.com/demo1/index.php?acs\" InResponseTo=\"ONELOGIN_4fee3b046395c4e751011e97f8900b5273d56685\"></samlp:Response>")
+      local doc, args, err = binding.parse_post("SAMLResponse", cb_error)
       assert.are.equal("document does not validate against schema", err)
-      assert.are.equal(parsed, doc)
+      assert.is_not_nil(doc)
+      assert.are.equal("_8e8dc5f69a98cc4c1ff3427e5ce34606fd672f91e6", saml.doc_id(doc))
+      assert.are.same(post_args, args)
     end)
 
     it("errors when no cert is found", function()
-      local doc, args, err = binding.parse_post("SAMLRequest", cb_error)
-      assert.are.equal("no key manager", err)
-      assert.are.equal(parsed, doc)
-    end)
-
-    it("passes args to verify function", function()
-      binding.parse_post("SAMLRequest", cb)
-      assert.spy(saml.verify_doc).was.called(1)
-      local args = saml.verify_doc.calls[1].vals
-      assert.are.same(mngr, args[1])
-      assert.are.equal(parsed, args[2])
-    end)
-
-    it("errors for verify failure", function()
-      saml.verify_doc.returns(false, "verify failed")
-      local doc, args, err = binding.parse_post("SAMLRequest", cb)
-      assert.are.equal(err, "verify failed")
-      assert.are.equal(parsed, doc)
-    end)
-
-    it("errors for invalid signature", function()
-      saml.verify_doc.returns(false, nil)
-      local doc, args, err = binding.parse_post("SAMLRequest", cb)
-      assert.are.equal(err, "invalid signature")
-      assert.are.equal(parsed, doc)
+      local doc, args, err = binding.parse_post("SAMLResponse", cb_error)
+      assert.are.equal("no cert", err)
+      assert.is_not_nil(doc)
+      assert.are.equal("_8e8dc5f69a98cc4c1ff3427e5ce34606fd672f91e6", saml.doc_id(doc))
+      assert.are.same(post_args, args)
     end)
 
     it("returns the parsed document", function()
-      saml.verify_doc.returns(true, nil)
-      local doc, args, err = binding.parse_post("SAMLRequest", cb)
+      local doc, args, err = binding.parse_post("SAMLResponse", cb)
       assert.is_nil(err)
-      assert.are.equal(parsed, doc)
+      assert.is_not_nil(doc)
+      assert.are.equal("_8e8dc5f69a98cc4c1ff3427e5ce34606fd672f91e6", saml.doc_id(doc))
+      assert.are.same(post_args, args)
     end)
   end)
-  ]]
 
 end)

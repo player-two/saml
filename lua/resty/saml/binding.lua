@@ -4,62 +4,8 @@ Functions for creating or parsing SAML bindings
 ]]
 
 local saml = require "saml"
-local zlib = require "zlib"
 
 local _M = {}
-
-local _WINDOW_BITS = -15
-
-
-local _FORM_INPUT = '<input type="hidden" name="${name}" value="${value}" />'
-local _POST_FORM = [[
-<!doctype html>
-<html>
-  <head>
-    <title>Redirecting for Authentication...</title>
-  </head>
-  <body>
-    <noscript>
-      <p><strong>Note:</strong> Since your browser does not support JavaScript, you must press the Continue button once to proceed.</p>
-    </noscript>
-    <form id="login-form" action="${action}" method="POST">
-    ${inputs}
-    <noscript><input type="submit" value="Continue" /></noscript>
-    </form>
-    <script type="text/javascript">
-      document.getElementById('login-form').submit();
-    </script>
-  </body>
-</html>
-]]
-
-local function interp(s, tab)
-  return s:gsub('($%b{})', function(w)
-    local key = w:sub(3, -2)
-    if not key:find(".", 2, true) then
-      return tab[key] or ""
-    else
-      local t = tab
-      for k in key:gmatch("%a+") do
-        t = t[k]
-        if not t then return "" end
-      end
-      return t
-    end
-  end)
-end
-
-local function post_form(action, params)
-  local inputs = ""
-  for k, v in pairs(params) do
-    inputs = inputs .. interp(_FORM_INPUT, { name = k, value = v })
-  end
-  return interp(_POST_FORM, {
-    action = action,
-    inputs = inputs,
-  })
-end
-
 
 --[[---
 Create a redirect binding
@@ -100,31 +46,17 @@ end
 --[[---
 Create a post binding
 @tparam xmlSecKey* key
-@tparam xmlSecTransformId transform_id
+@tparam string saml_type
+@tparam string content
+@tparam string sig_alg
+@tparam string relay_state
 @tparam string destination
-@tparam table params
 @treturn ?string html
 @treturn ?string error
 @see saml.sign_xml
 ]]
-function _M.create_post(key, transform_id, destination, params)
-  local xml_str = params.SAMLRequest or params.SAMLResponse
-  assert(xml_str, "no saml request or response")
-  local signed, err = saml.sign_xml(key, transform_id, xml_str, {
-    id_attr = "ID",
-    insert_after = { saml.XMLNS_ASSERTION, "Issuer" },
-  })
-  if err then return nil, err end
-  local encoded = ngx.encode_base64(signed)
-
-  local copy = {}
-  for k, v in pairs(params) do copy[k] = v end
-  if copy.SAMLRequest then
-    copy.SAMLRequest = encoded
-  else
-    copy.SAMLResponse = encoded
-  end
-  return post_form(destination, copy), nil
+function _M.create_post(key, saml_type, content, sig_alg, relay_state, destination)
+  return saml.binding_post_create(key, saml_type, content, sig_alg, relay_state, destination)
 end
 
 --[[---
@@ -143,29 +75,9 @@ function _M.parse_post(saml_type, key_mngr_from_doc)
   local args, err = ngx.req.get_post_args()
   if not args then return nil, nil, err end
 
-  local encoded = args[saml_type]
-  if not encoded then return nil, args, "no " .. saml_type end
-
-  --local doc, err = saml.doc_parse(encoded)
-  --if err then return doc, args, err end
-  local content = ngx.decode_base64(encoded)
-  if not content then return nil, args, saml_type .. " is not valid base64" end
-
-  local doc = saml.doc_read_memory(content)
-  if doc == nil then return nil, args, saml_type .. " is not valid xml" end
-
-  local ok = saml.doc_validate(doc)
-  if not ok then return doc, args, "document does not validate against schema" end
-  --]]
-
-  local mngr = key_mngr_from_doc(doc)
-  if not mngr then return doc, args, "no key manager" end
-
-  local valid, err = saml.verify_doc(mngr, doc)
-  if err then return doc, args, err end
-  if not valid then return doc, args, "invalid signature" end
-
-  return doc, args, nil
+  if not args[saml_type] then return nil, args, "no " .. saml_type end
+  local doc, err = saml.binding_post_parse(args[saml_type], key_mngr_from_doc)
+  return doc, args, err
 end
 
 return _M

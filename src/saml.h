@@ -66,6 +66,7 @@ void str_free(str_t* str);
 void str_grow(str_t* str);
 void str_cat(str_t* str, const char* data, int len);
 void str_append(str_t* str, char c);
+void str_print(str_t* str, FILE* f);
 
 char* saml_base64_encode(const byte* c, int len);
 int saml_base64_decode(const char* in, int in_len, byte** out, int* out_len);
@@ -86,7 +87,10 @@ int saml_verify_binary(xmlSecKey* cert, xmlSecTransformId transform_id, unsigned
 int saml_sign_doc(xmlSecKey* key, xmlSecTransformId transform_id, xmlDoc* doc, saml_doc_opts_t* opts);
 int saml_verify_doc(xmlSecKeysMngr* mngr, xmlDoc* doc, saml_doc_opts_t* opts);
 
-int saml_binding_redirect_create(xmlSecKey* key, char* saml_type, char* content, char* sig_alg, char* relay_state, str_t* query);
-int saml_binding_redirect_parse(char* content, char* sig_alg, xmlDoc** doc);
-int saml_binding_redirect_verify(xmlSecKey* cert, char* saml_type, char* content, char* sig_alg, char* relay_state, char* signature);
+saml_binding_status_t saml_binding_redirect_create(xmlSecKey* key, char* saml_type, char* content, char* sig_alg, char* relay_state, str_t* query);
+saml_binding_status_t saml_binding_redirect_parse(char* content, char* sig_alg, xmlDoc** doc);
+saml_binding_status_t saml_binding_redirect_verify(xmlSecKey* cert, char* saml_type, char* content, char* sig_alg, char* relay_state, char* signature);
+saml_binding_status_t saml_binding_post_create(xmlSecKey* key, char* saml_type, char* content, char* sig_alg, char* relay_state, char* destination, str_t* html);
+saml_binding_status_t saml_binding_post_parse(char* content, xmlDoc** doc);
+saml_binding_status_t saml_binding_post_verify(xmlSecKeysMngr* mngr, xmlDoc* doc);
 #endif

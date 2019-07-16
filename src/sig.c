@@ -125,7 +125,7 @@ int saml_sign_doc(xmlSecKey* key, xmlSecTransformId transform_id, xmlDoc* doc, s
   xmlNode* root = xmlDocGetRootElement(doc);
   if (root == NULL) {
     saml_log("no root node");
-    return -1;
+    return 1;
   }
 
   const xmlChar uri[80] = "#\0";
@@ -133,7 +133,7 @@ int saml_sign_doc(xmlSecKey* key, xmlSecTransformId transform_id, xmlDoc* doc, s
     xmlChar* id = xmlGetProp(root, opts->id_attr);
     if (id == NULL) {
       saml_log("no ID property on document root");
-      return -1;
+      return 1;
     }
     strncat((char*)uri, (char*)id, sizeof(uri) - 2);
     xmlFree(id);
@@ -151,7 +151,7 @@ int saml_sign_doc(xmlSecKey* key, xmlSecTransformId transform_id, xmlDoc* doc, s
     xmlNode* target = xmlSecFindNode(root, opts->insert_after_el, opts->insert_after_ns);
     if (target == NULL) {
       saml_log("insertion point node not found");
-      return -1;
+      return 1;
     }
 
     if (xmlAddNextSibling(target, sig) == NULL) {
@@ -214,7 +214,7 @@ int saml_sign_doc(xmlSecKey* key, xmlSecTransformId transform_id, xmlDoc* doc, s
     return -1;
   }
 
-  int status = ctx->status == xmlSecDSigStatusSucceeded ? 0 : 1;
+  int status = ctx->status == xmlSecDSigStatusSucceeded ? 0 : -1;
   xmlSecDSigCtxDestroy(ctx);
   return status;
 }

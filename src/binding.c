@@ -4,7 +4,33 @@
 #  define DEF_MEM_LEVEL  MAX_MEM_LEVEL
 #endif
 
-static char* SAML_BINDING_ERRORS[] = {
+static char FORM_PRE[] = "\
+<!doctype html>\n\
+<html>\n\
+  <head>\n\
+    <title>Redirecting for Authentication...</title>\n\
+  </head>\n\
+  <body>\n\
+    <noscript>\n\
+      <p><strong>Note:</strong> Since your browser does not support JavaScript, you must press the Continue button once to proceed.</p>\n\
+    </noscript>\n\
+    <form id=\"login-form\" method=\"POST\" action=\"";
+
+static char FORM_INPUT_NAME[] = "\">\n\
+      <input type=\"hidden\" name=\"";
+
+static char FORM_INPUT_VALUE[] = "\" value=\"";
+
+static char FORM_POST[] = "\">\
+      <noscript><input type=\"submit\" value=\"Continue\" /></noscript>\n\
+    </form>\n\
+    <script type=\"text/javascript\">\n\
+      document.getElementById('login-form').submit();\n\
+    </script>\n\
+  </body>\n\
+</html>";
+
+static char* ERRORS[] = {
   "internal zlib error",
   "internal xmlsec error",
   "ok", // just in case it was actually a success
@@ -20,7 +46,7 @@ static char* SAML_BINDING_ERRORS[] = {
 };
 
 char* saml_binding_error_msg(saml_binding_status_t status) {
-  return SAML_BINDING_ERRORS[status - SAML_ZLIB_ERROR];
+  return ERRORS[status - SAML_ZLIB_ERROR];
 }
 
 static void redirect_concat_args(char* saml_type, char* content, char* sig_alg, char* relay_state, str_t* query) {
@@ -190,10 +216,98 @@ saml_binding_status_t saml_binding_redirect_verify(xmlSecKey* cert, char* saml_t
   }
 }
 
-int saml_binding_post_create(xmlSecKey* key, char* saml_type, char* content, char* sig_alg, char* relay_state) {
+saml_binding_status_t saml_binding_post_create(xmlSecKey* key, char* saml_type, char* content, char* sig_alg, char* relay_state, char* destination, str_t* html) {
+  xmlSecTransformId transform_id = xmlSecTransformIdListFindByHref(xmlSecTransformIdsGet(), (xmlChar*)sig_alg, xmlSecTransformUriTypeAny);
+  if (transform_id == NULL) {
+    return SAML_INVALID_SIG_ALG;
+  }
+
+  xmlDoc* doc = xmlReadMemory(content, strlen(content), "tmp.xml", NULL, 0);
+  if (doc == NULL) {
+    return SAML_INVALID_XML;
+  }
+
+  saml_doc_opts_t opts = {
+    .id_attr = (xmlChar*)"ID",
+    .insert_after_ns = (xmlChar*)SAML_XMLNS_ASSERTION,
+    .insert_after_el = (xmlChar*)"Issuer"
+  };
+  int res = saml_sign_doc(key, transform_id, doc, &opts);
+  if (res < 0) {
+    xmlFreeDoc(doc);
+    return SAML_XMLSEC_ERROR;
+  } else if (res > 0) {
+    xmlFreeDoc(doc);
+    return SAML_INVALID_DOC;
+  }
+
+  xmlChar* buf;
+  int buf_len;
+  xmlDocDumpMemory(doc, &buf, &buf_len);
+  xmlFree(doc);
+
+  char* result = saml_base64_encode((byte*)buf, buf_len);
+  char* result_uri = saml_uri_encode(result);
+  xmlFree(buf);
+  free(result);
+
+  str_init(html, 1024);
+  str_cat(html, FORM_PRE, sizeof(FORM_PRE) - 1);
+  str_cat(html, destination, strlen(destination));
+
+  str_cat(html, FORM_INPUT_NAME, sizeof(FORM_INPUT_NAME) - 1);
+  str_cat(html, saml_type, strlen(saml_type));
+  str_cat(html, FORM_INPUT_VALUE, sizeof(FORM_INPUT_VALUE) - 1);
+  str_cat(html, result_uri, strlen(result_uri));
+  free(result_uri);
+
+  if (relay_state != NULL) {
+    char* relay_state_uri = saml_uri_encode(relay_state);
+    str_cat(html, FORM_INPUT_NAME, sizeof(FORM_INPUT_NAME) - 1);
+    str_cat(html, "RelayState", sizeof("RelayState") - 1);
+    str_cat(html, FORM_INPUT_VALUE, sizeof(FORM_INPUT_VALUE) - 1);
+    str_cat(html, relay_state_uri, strlen(relay_state_uri));
+    free(relay_state_uri);
+  }
+  str_cat(html, FORM_POST, sizeof(FORM_POST) - 1);
+
   return SAML_OK;
 }
 
-int saml_binding_post_parse(char* content, xmlDoc** doc) {
+saml_binding_status_t saml_binding_post_parse(char* content, xmlDoc** doc) {
+  if (content == NULL) {
+    return SAML_NO_CONTENT;
+  }
+
+  byte* decoded = NULL;
+  int decoded_len;
+  if (saml_base64_decode(content, strlen(content), &decoded, &decoded_len) < 0) {
+    if (decoded != NULL) {
+      free(decoded);
+    }
+    return SAML_BASE64;
+  }
+
+  *doc = xmlReadMemory((char*)decoded, decoded_len, "tmp.xml", NULL, 0);
+  if (*doc == NULL) {
+    return SAML_INVALID_XML;
+  }
+
+  if (!saml_doc_validate(*doc)) {
+    return SAML_INVALID_DOC;
+  }
+
   return SAML_OK;
+}
+
+saml_binding_status_t saml_binding_post_verify(xmlSecKeysMngr* mngr, xmlDoc* doc) {
+  saml_doc_opts_t opts = { .id_attr = (xmlChar*)"ID" };
+  int res = saml_verify_doc(mngr, doc, &opts);
+  if (res < 0) {
+    return SAML_XMLSEC_ERROR;
+  } else if (res == 0) {
+    return SAML_OK;
+  } else {
+    return SAML_INVALID_SIGNATURE;
+  }
 }
