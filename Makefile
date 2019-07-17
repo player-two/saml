@@ -1,4 +1,4 @@
-include src/common.mk
+include src/Makefile
 
 .PHONY: setup
 setup:
@@ -18,10 +18,12 @@ docs:
 
 .PHONY: test
 test:
-	$(MAKE) -C lua test
+	$(MAKE) -C lua -f dev.mk test
 
-src/saml.o:
-	$(MAKE) -C src -f common.mk saml.o
+.PHONY: release
+release:
+	$(MAKE) -C lua -f dev.mk release
+	#./scripts/release.sh v$(VERSION) lua/saml-$(VERSION).tar.gz
 
 bin/saml.o: bin/saml.c
 	$(CC) -c -o bin/saml.o $<

@@ -1,44 +1,16 @@
--include common.mk # only the build and install targets require this
+include src/Makefile
 
 LUA_INCDIR=/usr/include
-TEST_ARGS?=.
 
 .DEFAULT_GOAL: build
-
-.PHONY: prepack
-prepack:
-	rm -rf .build
-	mkdir .build
-	cp -R resty ../data ../src/* lua_saml.c Makefile saml-dev-1.rockspec .build
-
-.PHONY: test
-test: prepack
-	docker run --rm -it \
-		-v `pwd`/.build:/tmp/.build \
-		-v `pwd`/t:/t \
-		-w /t \
-		-e DATA_DIR=/usr/local/openresty/luajit/lib/luarocks/rocks/saml/dev-1/data/ \
-		resty-saml-test:latest \
-		bash -c "cd /tmp/.build && luarocks make && cd /t && busted --lua=/usr/local/openresty/bin/resty -lpath /usr/local/openresty/lualib/?.lua -cpath /usr/local/openresty/lualib/?.so $(TEST_ARGS)"
-
-.PHONY: example
-example: prepack
-	docker run --rm -it --name resty-saml-example \
-		-v `pwd`/.build:/tmp/.build \
-		-v `pwd`/t/data:/ssl \
-		-v `pwd`/example:/example \
-		-p 8088:8088 \
-		-p 8089:8089 \
-		resty-saml:latest \
-		bash -c "cd /tmp/.build && luarocks make && cd /example && openresty -c /example/nginx.conf -g 'daemon off;'"
 
 .PHONY: build
 build: saml.so
 
 lua_saml.o: lua_saml.c
-	$(CC) -c $(CFLAGS_ALL) -I$(LUA_INCDIR) -o $@ $<
+	$(CC) -c $(CFLAGS_ALL) -I$(LUA_INCDIR) -Isrc/ -o $@ $<
 
-saml.so: lua_saml.o saml.o
+saml.so: lua_saml.o src/saml.o
 	$(CC) $(LDFLAGS_ALL) -o $@ $^
 
 .PHONY: install
@@ -47,15 +19,3 @@ install: build
 	mkdir -p $(INST_LUADIR)/resty/saml
 	cp -R resty $(INST_LUADIR)
 	cp -R data $(INST_CONFDIR)
-
-.PHONY: build-local
-build-local: prepack
-	$(MAKE) -C .build build
-
-.PHONY: build-local
-test-local: build-local
-	(cd t && DATA_DIR=$(HOME)/dev/saml/lua/.build/data/ ~/.luarocks/bin/busted --cpath `pwd`/../.build/?.so .)
-
-.PHONY: debug
-debug: build-local
-	LUA_CPATH=`pwd`/.build/?.so valgrind lua -l saml t/debug.lua

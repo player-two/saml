@@ -1,3 +1,5 @@
+VERSION=dev-1
+
 # Default locations
 LIBXML2_INCDIR=/usr/include/libxml2
 XMLSEC1_INCDIR=/usr/local/include/xmlsec1
@@ -12,8 +14,9 @@ LDFLAGS=-g
 XMLSEC1_LDFLAGS=$(shell xmlsec1-config --libs)
 LDFLAGS_ALL=$(LIBFLAG) $(LDFLAGS) -L$(LIBXML2_LIBDIR) -L$(XMLSEC1_LIBDIR) $(XMLSEC1_LDFLAGS)
 
-VERSION=0.1
-
 saml.o: saml.c
 	@echo $(CFLAGS_ALL)
 	$(CC) -c $(CFLAGS_ALL) -o $@ $<
+
+src/saml.o:
+	$(MAKE) -C src saml.o

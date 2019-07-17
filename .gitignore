@@ -3,4 +3,5 @@
 bin/*
 !bin/saml.c
 lua/.build
+lua/*.tar.gz
 out

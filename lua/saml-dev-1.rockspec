@@ -1,7 +1,7 @@
 package = "saml"
 version = "dev-1"
 source = {
-  url = "https://github.com/megalord/saml/releases/download/v0.1/lua.tar.gz"
+  url = "https://github.com/megalord/saml/releases/download/vdev-1/lua.tar.gz"
 }
 description = {
   summary = "Provides SAML support for OpenResty",
@@ -9,8 +9,7 @@ description = {
   license = "MIT",
 }
 dependencies = {
-  "lua >= 5.1",
-  "lua-zlib",
+  "lua >= 5.1"
 }
 external_dependencies = {
   LIBXML2 = {
