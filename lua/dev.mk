@@ -7,12 +7,13 @@ prepack:
 	rm -rf .build
 	mkdir .build
 	cp -R resty ../data ../src lua_saml.c Makefile saml-$(VERSION).rockspec .build
+	rm .build/src/saml.o
 
 .PHONY: release
 release: prepack
 	cp -R .build saml-$(VERSION)
 	rm saml-$(VERSION)/*.rockspec
-	tar -czvpf saml-$(VERSION).tar.gz saml-$(VERSION)
+	tar -czvpf lua.tar.gz saml-$(VERSION)
 	rm -rf saml-$(VERSION)
 
 .PHONY: test

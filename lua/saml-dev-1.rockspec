@@ -1,7 +1,8 @@
 package = "saml"
 version = "dev-1"
 source = {
-  url = "https://github.com/megalord/saml/releases/download/vdev-1/lua.tar.gz"
+  url = "https://github.com/megalord/saml/releases/download/vdev-1/lua.tar.gz",
+  dir = "saml-dev-1",
 }
 description = {
   summary = "Provides SAML support for OpenResty",

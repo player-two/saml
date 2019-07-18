@@ -23,7 +23,8 @@ test:
 .PHONY: release
 release:
 	$(MAKE) -C lua -f dev.mk release
-	#./scripts/release.sh v$(VERSION) lua/saml-$(VERSION).tar.gz
+	./scripts/release.sh v$(VERSION) lua/lua.tar.gz
+	luarocks upload lua/saml-$(VERSION).rockspec
 
 bin/saml.o: bin/saml.c
 	$(CC) -c -o bin/saml.o $<
