@@ -103,7 +103,7 @@ static int hex_is_valid(char c) {
 }
 
 static char hex_from_dec(char n) {
-  return n + (n < 10 ? '0' : ('a' - 10));
+  return n + (n < 10 ? '0' : ('A' - 10));
 }
 
 static char hex_to_dec(char c) {
@@ -139,12 +139,11 @@ int saml_uri_decode(const char* in, char** out) {
   char* out_c = *out;
   while(*in != '\0') {
     if (*in == '%') {
-      if (!hex_is_valid(*in) || !hex_is_valid(*(in + 1))) {
+      if (!hex_is_valid(in[1]) || !hex_is_valid(in[2])) {
         return -1;
       }
-      in++;
-      *out_c = 10 * hex_to_dec(*in++);
-      *out_c += hex_to_dec(*in++);
+      *out_c = 16 * hex_to_dec(in[1]) + hex_to_dec(in[2]);
+      in += 3;
       out_c++;
     } else {
       *out_c++ = *in++;

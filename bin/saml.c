@@ -61,6 +61,7 @@ int uri_parse_args(char* uri, uri_arg_t** args) {
   char *query;
   cu = curl_url_get(h, CURLUPART_QUERY, &query, 0);
   if (cu != CURLUE_OK) {
+    fprintf(stderr, "curl_url_get() failed with %d\n", cu);
     curl_url_cleanup(h);
     return -1;
   }
@@ -258,11 +259,15 @@ int verify_redirect(char* args[], int args_len) {
       fprintf(stderr, "failed to read uri from stdin\n");
       return 1;
     }
-    uri_stdin[read_len] = '\0';
+    for (int i = 2; i >= 0; i--) {
+      if (uri_stdin[read_len - i] == '\r' || uri_stdin[read_len - i] == '\n') {
+        uri_stdin[read_len - i] = '\0';
+      }
+    }
     uri = uri_stdin;
   }
 
-  uri_arg_t* uri_arg;
+  uri_arg_t* uri_arg = NULL;
   if (uri_parse_args(uri, &uri_arg) < 0) {
     fprintf(stderr, "uri parsing failed\n");
     if (uri_arg != NULL) {
@@ -320,11 +325,15 @@ int verify_redirect(char* args[], int args_len) {
   }
 
   xmlDoc* doc;
-  if (saml_binding_redirect_parse(saml->value, sig_alg->value, &doc) < 0) {
+  saml_binding_status_t res = saml_binding_redirect_parse(saml->value, sig_alg->value, &doc);
+  if (res != SAML_OK) {
+    fprintf(stderr, "%s\n", saml_binding_error_msg(res));
     return 1;
   }
 
-  if (saml_binding_redirect_verify(cert, saml->name, saml->value, sig_alg->value, (relay_state == NULL ? NULL : relay_state->value), signature->value) < 0) {
+  res = saml_binding_redirect_verify(cert, saml->name, saml->value, sig_alg->value, (relay_state == NULL ? NULL : relay_state->value), signature->value);
+  if (res != SAML_OK) {
+    fprintf(stderr, "%s\n", saml_binding_error_msg(res));
     return 1;
   }
 
@@ -343,7 +352,11 @@ int main(int argc, char* argv[]) {
     return 1;
   }
 
-  saml_init_opts_t opts = (saml_init_opts_t){ .debug = 0, .data_dir = data_dir };
+  strncat(data_dir, "/data", sizeof(data_dir) - strlen(data_dir) - 1);
+
+  char* debug = getenv("SAML_DEBUG");
+
+  saml_init_opts_t opts = (saml_init_opts_t){ .debug = debug != NULL, .data_dir = data_dir };
   if (saml_init(&opts) < 0) {
     fprintf(stderr, "initialization failed\n");
     return 1;

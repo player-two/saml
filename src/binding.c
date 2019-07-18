@@ -89,16 +89,17 @@ saml_binding_status_t saml_binding_redirect_create(xmlSecKey* key, char* saml_ty
     return SAML_ZLIB_ERROR;
   }
 
-  unsigned char* deflated = malloc(content_len);
+  stream.avail_out = deflateBound(&stream, content_len);
+  unsigned char* deflated = malloc(stream.avail_out);
   stream.next_out = deflated;
-  stream.avail_out = content_len;
 
-  if (deflate(&stream, Z_FINISH) == Z_STREAM_ERROR) {
+  if (deflate(&stream, Z_FINISH) != Z_STREAM_END) {
     deflateEnd(&stream);
     return SAML_ZLIB_ERROR;
   }
 
   char* b64_encoded = saml_base64_encode(deflated, stream.total_out);
+
   redirect_concat_args(saml_type, b64_encoded, sig_alg, relay_state, query);
   free(b64_encoded);
 

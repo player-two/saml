@@ -40,5 +40,5 @@ void str_append(str_t* str, char c) {
 }
 
 void str_print(str_t* str, FILE* f) {
-  fprintf(f, "%*s\n", str->len, str->data);
+  fprintf(f, "%.*s\n", str->len, str->data);
 }

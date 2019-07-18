@@ -123,7 +123,7 @@ describe("saml integration", function()
       local key = assert(saml.key_read_memory(key_text, saml.KeyDataFormatPem))
       local authn_request = assert(utils.readfile("data/authn_request.xml"))
       local query_string = assert(saml.binding_redirect_create(key, "SAMLRequest", authn_request, "http://www.w3.org/2001/04/xmldsig-more#rsa-sha512", "/"))
-      for k, v in query_string:gmatch("&?([^=]+)=([^&]*)") do args[k] = saml.uri_decode(v) end
+      for k, v in query_string:gmatch("&?([^=]+)=([^&]*)") do args[k] = assert(saml.uri_decode(v)) end
     end)
 
     it("via #samltool", function()
