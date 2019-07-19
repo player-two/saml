@@ -25,7 +25,7 @@
 #include "saml.h"
 
 static const char* XSD_MAIN = "/xsd/saml-schema-protocol-2.0.xsd";
-static xmlXPathCompExpr *XPATH_ATTRIBUTES, *XPATH_SESSION_INDEX;
+static xmlXPathCompExpr *XPATH_ATTRIBUTES, *XPATH_NAME_ID, *XPATH_SESSION_INDEX, *XPATH_STATUS_CODE;
 static xmlSchemaValidCtxt* XML_SCHEMA_VALIDATE_CTX;
 
 const char* SAML_XMLNS_ASSERTION = "urn:oasis:names:tc:SAML:2.0:assertion";
@@ -62,7 +62,9 @@ int saml_init(saml_init_opts_t* opts) {
   xmlInitParser();
 
   XPATH_ATTRIBUTES = xmlXPathCompile((const xmlChar*)"//samlp:Response/saml:Assertion/saml:AttributeStatement/saml:Attribute");
+  XPATH_NAME_ID = xmlXPathCompile((const xmlChar*)"//samlp:Response/saml:Assertion/saml:Subject/saml:NameID");
   XPATH_SESSION_INDEX = xmlXPathCompile((const xmlChar*)"//samlp:Response/saml:Assertion/saml:AuthnStatement/@SessionIndex");
+  XPATH_STATUS_CODE = xmlXPathCompile((const xmlChar*)"//samlp:*/samlp:Status/samlp:StatusCode/@Value");
 
   // https://www.aleksey.com/xmlsec/api/xmlsec-notes-init-shutdown.html
   if (xmlSecInit() < 0) {
@@ -133,6 +135,8 @@ void saml_shutdown() {
 
   xmlSchemaFreeValidCtxt(XML_SCHEMA_VALIDATE_CTX);
   xmlXPathFreeCompExpr(XPATH_ATTRIBUTES);
+  xmlXPathFreeCompExpr(XPATH_NAME_ID);
   xmlXPathFreeCompExpr(XPATH_SESSION_INDEX);
+  xmlXPathFreeCompExpr(XPATH_STATUS_CODE);
   xmlCleanupParser();
 }

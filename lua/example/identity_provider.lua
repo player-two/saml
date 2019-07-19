@@ -34,6 +34,14 @@ local RESPONSE = [[
   </samlp:Status>
   <saml:Assertion xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xs="http://www.w3.org/2001/XMLSchema" ID="assertion-${uuid}" Version="2.0" IssueInstant="${issue_instant}">
     <saml:Issuer>${issuer}</saml:Issuer>
+    <saml:Subject>
+      <saml:NameID SPNameQualifier="${destination}" Format="urn:oasis:names:tc:SAML:2.0:nameid-format:transient">${name_id}</saml:NameID>
+    </saml:Subject>
+    <saml:AuthnStatement AuthnInstant="${issue_instant}" SessionIndex="${session_index}">
+      <saml:AuthnContext>
+        <saml:AuthnContextClassRef>urn:oasis:names:tc:SAML:2.0:ac:classes:Password</saml:AuthnContextClassRef>
+      </saml:AuthnContext>
+    </saml:AuthnStatement>
     <saml:AttributeStatement>
       <saml:Attribute Name="username" NameFormat="urn:oasis:names:tc:SAML:2.0:attrname-format:basic">
         <saml:AttributeValue xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="xs:string">world</saml:AttributeValue>
@@ -49,6 +57,8 @@ local function response(destination, in_response_to, status)
     in_response_to = in_response_to,
     issue_instant = os.date("!%Y-%m-%dT%TZ"),
     issuer = IDP_URI,
+    name_id = "id-" .. math.random(1, 100),
+    session_index = "id-" .. math.random(1, 100),
     status = status,
     uuid = "id-" .. math.random(1, 100),
   })
@@ -86,9 +96,9 @@ function _M:sso(relay_state)
   local status
   if err then
     ngx.log(ngx.WARN, err)
-    status = saml.STATUS_CODES_REQUESTER
+    status = saml.STATUS_REQUESTER
   else
-    status = saml.STATUS_CODES_SUCCESS
+    status = saml.STATUS_SUCCESS
   end
 
   local dest = SP_URI .. "/acs"

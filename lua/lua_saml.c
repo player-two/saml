@@ -275,6 +275,29 @@ static int doc_id(lua_State* L) {
 
 
 /***
+Get the text of the NameID node
+@function doc_name_id
+@tparam xmlDoc* doc
+@treturn ?string name_id
+*/
+static int doc_name_id(lua_State* L) {
+  lua_settop(L, 1);
+  xmlDoc* doc = (xmlDoc*)lua_touserdata(L, 1);
+  luaL_argcheck(L, doc != NULL, 1, "`xmlDoc*' expected");
+  lua_pop(L, 1);
+
+  xmlChar* name_id = saml_doc_name_id(doc);
+  if (name_id == NULL) {
+    lua_pushnil(L);
+  } else {
+    lua_pushstring(L, (char*)name_id);
+    xmlFree(name_id);
+  }
+  return 1;
+}
+
+
+/***
 Get the text of the issuer node
 @function doc_issuer
 @tparam xmlDoc* doc
@@ -292,6 +315,29 @@ static int doc_issuer(lua_State* L) {
   } else {
     lua_pushstring(L, (char*)issuer);
     xmlFree(issuer);
+  }
+  return 1;
+}
+
+
+/***
+Get the value of the StatusCode[Value] attribute in the document
+@function doc_status_code
+@tparam xmlDoc* doc
+@treturn ?string status_code
+*/
+static int doc_status_code(lua_State* L) {
+  lua_settop(L, 1);
+  xmlDoc* doc = (xmlDoc*)lua_touserdata(L, 1);
+  luaL_argcheck(L, doc != NULL, 1, "`xmlDoc*' expected");
+  lua_pop(L, 1);
+
+  xmlChar* status_code = saml_doc_status_code(doc);
+  if (status_code == NULL) {
+    lua_pushnil(L);
+  } else {
+    lua_pushstring(L, (char*)status_code);
+    xmlFree(status_code);
   }
   return 1;
 }
@@ -984,6 +1030,8 @@ static const struct luaL_Reg saml_funcs[] = {
   {"doc_root_name", doc_root_name},
   {"doc_id", doc_id},
   {"doc_issuer", doc_issuer},
+  {"doc_name_id", doc_name_id},
+  {"doc_status_code", doc_status_code},
   {"doc_session_index", doc_session_index},
   {"doc_attrs", doc_attrs},
 

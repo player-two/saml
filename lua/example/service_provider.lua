@@ -116,10 +116,18 @@ function _M.acs()
     ngx.exit(ngx.HTTP_BAD_REQUEST)
   end
 
-  -- TODO: lookup status
+  local status_code = saml.doc_status_code(doc)
+  if status_code ~= saml.STATUS_SUCCESS then
+    ngx.log(ngx.ERR, "IdP returned non-success status: " .. status_code)
+    ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
+  end
 
   local attrs = saml.doc_attrs(doc)
+  ngx.shared.name_id = saml.doc_name_id(doc)
+  ngx.shared.session_index = saml.doc_session_index(doc)
   saml.doc_free(doc)
+  print(ngx.shared.name_id)
+  print(ngx.shared.session_index)
 
   ngx.header["Set-Cookie"] = "username=" .. attrs.username .. ";"
 
@@ -181,7 +189,7 @@ function _M.logout()
 
   local query_str, err = saml.binding.create_redirect(SIGNING_KEY, {
     RelayState =  "/",
-    SAMLRequest = logout_request(name_id, session_index), -- TODO store these on ngx.shared during acs
+    SAMLRequest = logout_request(ngx.shared.name_id, ngx.shared.session_index),
     SigAlg = RSA_SHA_512_HREF,
   })
   if err then

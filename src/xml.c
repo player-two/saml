@@ -42,8 +42,27 @@ xmlChar* saml_doc_issuer(xmlDoc* doc) {
 }
 
 
-xmlChar* saml_doc_session_index(xmlDoc* doc) {
-  xmlXPathObject* obj = eval_xpath(doc, XPATH_SESSION_INDEX);
+xmlChar* saml_doc_name_id(xmlDoc* doc) {
+  xmlXPathObject* obj = eval_xpath(doc, XPATH_NAME_ID);
+  if (obj == NULL || xmlXPathNodeSetIsEmpty(obj->nodesetval)) {
+    xmlXPathFreeObject(obj);
+    return NULL;
+  }
+
+  xmlNode* node = obj->nodesetval->nodeTab[0];
+  if (node->type != XML_ELEMENT_NODE) {
+    xmlXPathFreeObject(obj);
+    return NULL;
+  }
+
+  xmlChar* content = xmlNodeListGetString(doc, node->children, 1);
+  xmlXPathFreeObject(obj);
+  return content;
+}
+
+
+xmlChar* saml_doc_status_code(xmlDoc* doc) {
+  xmlXPathObject* obj = eval_xpath(doc, XPATH_STATUS_CODE);
   if (obj == NULL || xmlXPathNodeSetIsEmpty(obj->nodesetval)) {
     xmlXPathFreeObject(obj);
     return NULL;
@@ -58,6 +77,40 @@ xmlChar* saml_doc_session_index(xmlDoc* doc) {
   xmlChar* content = xmlNodeListGetString(doc, node->children, 1);
   xmlXPathFreeObject(obj);
   return content;
+}
+
+
+xmlChar* saml_doc_session_index(xmlDoc* doc) {
+  xmlNode* node = xmlDocGetRootElement(doc);
+  if (node == NULL) {
+    return NULL;
+  }
+
+  if (xmlStrEqual(node->name, (xmlChar*)"LogoutRequest") == 1) {
+    node = xmlSecFindNode(node, (xmlChar*)"SessionIndex", xmlSecDSigNs);
+    if (node == NULL) {
+      return NULL;
+    }
+    return xmlNodeListGetString(doc, node->children, 1);
+  } else if (xmlStrEqual(node->name, (xmlChar*)"Response") == 1) {
+    xmlXPathObject* obj = eval_xpath(doc, XPATH_SESSION_INDEX);
+    if (obj == NULL || xmlXPathNodeSetIsEmpty(obj->nodesetval)) {
+      xmlXPathFreeObject(obj);
+      return NULL;
+    }
+
+    xmlNode* node = obj->nodesetval->nodeTab[0];
+    if (node->type != XML_ATTRIBUTE_NODE) {
+      xmlXPathFreeObject(obj);
+      return NULL;
+    }
+
+    xmlChar* content = xmlNodeListGetString(doc, node->children, 1);
+    xmlXPathFreeObject(obj);
+    return content;
+  } else {
+    return NULL;
+  }
 }
 
 

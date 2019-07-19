@@ -78,6 +78,8 @@ void saml_shutdown();
 
 int saml_doc_validate(xmlDoc* doc);
 xmlChar* saml_doc_issuer(xmlDoc* doc);
+xmlChar* saml_doc_name_id(xmlDoc* doc);
+xmlChar* saml_doc_status_code(xmlDoc* doc);
 xmlChar* saml_doc_session_index(xmlDoc* doc);
 int saml_doc_attrs(xmlDoc* doc, saml_attr_t** attrs, size_t* attrs_len);
 void saml_attrs_free(saml_attr_t* attrs, size_t attrs_len);
