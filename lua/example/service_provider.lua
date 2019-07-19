@@ -126,8 +126,6 @@ function _M.acs()
   ngx.shared.name_id = saml.doc_name_id(doc)
   ngx.shared.session_index = saml.doc_session_index(doc)
   saml.doc_free(doc)
-  print(ngx.shared.name_id)
-  print(ngx.shared.session_index)
 
   ngx.header["Set-Cookie"] = "username=" .. attrs.username .. ";"
 
