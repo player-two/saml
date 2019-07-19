@@ -1,4 +1,4 @@
-VERSION=dev-1
+VERSION=0.1
 
 # Default locations
 LIBXML2_INCDIR=/usr/include/libxml2
