@@ -6,7 +6,7 @@ TEST_ARGS?=.
 prepack:
 	rm -rf .build
 	mkdir .build
-	cp -R resty ../data ../src lua_saml.c Makefile saml-$(VERSION).rockspec .build
+	cp -R resty ../data ../src lua_saml.c Makefile saml-$(VERSION)-1.rockspec .build
 	rm .build/src/saml.o
 
 .PHONY: release

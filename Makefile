@@ -24,7 +24,7 @@ test:
 release:
 	$(MAKE) -C lua -f dev.mk release
 	./scripts/release.sh v$(VERSION) lua/lua.tar.gz
-	luarocks upload lua/saml-$(VERSION).rockspec
+	luarocks upload lua/saml-$(VERSION)-1.rockspec
 
 bin/saml.o: bin/saml.c
 	$(CC) -c -o bin/saml.o $<
