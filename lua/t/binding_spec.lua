@@ -66,10 +66,10 @@ describe("binding", function()
 
     before_each(function()
       valid_args = {
-        SAMLRequest = "fVNNr9MwELz3V1i+N3Hy+kGtNqi0fFQqbdQEDlyQsTfUUmwH23mv/Huc0KIgQU6W7JnZmd312jFVN3Tb+qu+wI8WnEc3VWtH+4cNbq2mhjnpqGYKHPWcFtuPR5pGhDbWeMNNjQeUcQZzDqyXRmN02G/w+fT2eH5/OH19RVZLsqwIeSJsLghZpISvxEpUq2W1SJesgpXgPJ1h9BmsC/wNDnIY5dY8SwH2FCptcJEjHwIEbedaOGjnmfYBSZLZlCynyaJMn+g8pbP5F4z2ASk1873Y1fuGxrEUTQQ3ppoaIm5UXBTnAuyz5BA116Yv1wd+I7WQ+vt41m+/QY5+KMt8mp+LEqPtI//OaNcqsHf5T5fjHxPubw8ClEnioAW3zsRrxh3OJgitu27TPqnNxqgKPBPMs469joesh0pDu/4d9rmpJf+J3hmrmP9/uCRK+hspplUPpaCYrLdCWHAuhKxr87KzwHyYibct4HhQ6r5lIPqdC33wcPNoZ1TDrHTdMEIE7vuMj5RD6K4OS3SBKhvdM055hwvXeThejBXd7ICHuqVl2jXG+nsz/ine+Y1HDGeTx/Pw62STXw==",
+        SAMLRequest = "nZLPT8IwFIDv/BVN72NjER0vMIIQIwnqAtODtzqqNOna2feG8t/bTSAkEg7emr4f3/deOxx/l5ptpUNlzYj3uhFn47QzRFHqCiY1bcxSftYSiflEg9AERrx2BqxAhWBEKRGogNXkYQFxNwKBKB35dvykpLpcUzlLtrCas5eDStyozGcjrtZB0hwRazk3SMKQj0a9QRBdB/FNHvegH8FV/5WzmfdURlDbYENUQRhqWwi9sUiQRMkgRLScZXvcrTJrZT4uu739JiHc53kWZE+rnLPJYcapNViX0q2k26pCPi8X58FJKApswVu1lu7RU0Z86XV3bF96jPG0w1j7ANDO7NiddaWgy5bNjd/Ue5sK0pCiHU/PqgzDk+ZHWAWN1HyWWa2K3T+Y5IRB5cl+PVrbr6mTgvyU5GrJQ/+nwr+fKv0B",
         RelayState = "/",
         SigAlg = utils.xmlSecHrefRsaSha512,
-        Signature = "hv2rYd1cx0UtJWEkKDpHW1kjMErZKOKU6DRoV/OaQEJVXCeBuNtgopP8udKsR6VKXbDCfXkb7DEMMO1jSNZ6QN1zfqWKw14LV7Xg4mwr2+9erQTx9Axm0nwcWPfN/bu7WIVYkq9vFDR+vHPxfle2sTml9nOVnj4rucZ6Pvn71C4nPee9MicRg56aBpEhfGKrEcRVxj3DeMwul1TS68HQt417UpMvcP8Zor49B8pN2FsQL/1Ao9bpgHvaBdqfG+tnNAwzd83xzjHG1MPDASw8/O39ZPh1t6EfT/ey7rILwAt/QQnGNzbvL8VyrFTeaunyNI4KaOKpF4W9LJOxuwe3PQ==",
+        Signature = "i+YCidTVfm/Sza2nkBEx+489RWiEI56SV/XJRC9d1hK0dFh9slDZsW7ZBJqSMyQ8CH/noHR46qjTjK5QBPH6awCxRieUFrJQ/ePy6f14cZfPgJxE7ctb8qwNgb6xkqGU2ou/7Bui8DH+mrAKaiJWSpO9AYKteBvGW0zeFBqbQh6M912Hz9m+SjW+l1bTif4LxOn+zDtNrW+QQmCCakcPUOOQhaB+Ml1RaEfu6NVTvCdrwA/1BWfpTb7XyBDvu3GXe4DPmuu0kGqUkUyWhLfFJ3oUNIgUlhXSj6gBP8Hus4ooTbQGNdfiNxBq2SHBdJVN3fVFFA1d+I5MOLlgemGm4g==",
       }
 
       ngx.req.get_method.returns("GET")
@@ -141,7 +141,7 @@ describe("binding", function()
       local doc, args, err = binding.parse_redirect("SAMLRequest", cb)
       assert.is_nil(err)
       assert.is_not_nil(doc)
-      assert.are.equal("ONELOGIN_809707f0030a5d00620c9d9df97f627afe9dcc24", saml.doc_id(doc))
+      assert.are.equal("id-80", saml.doc_id(doc))
     end)
 
   end)
