@@ -108,10 +108,10 @@
 
 <span class="keyword">local</span> LOGOUT_REQUEST = <span class="string">[[
 &lt;?xml version="1.0"?&gt;
-&lt;samlp:LogoutRequest xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion" xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol" Version="2.0" ID="{* id *}" IssueInstant="{* issue_instant *}" Destination="{* destination *}"&gt;
-  &lt;saml:Issuer Format="urn:oasis:names:tc:SAML:2.0:nameid-format:entity"&gt;{* issuer *}&lt;/saml:Issuer&gt;
-  &lt;saml:NameID NameQualifier="{* name_qualifier *}" SPNameQualifier="{* sp_name_qualifier *}" Format="urn:oasis:names:tc:SAML:2.0:nameid-format:persistent"&gt;{* name_id *}&lt;/saml:NameID&gt;
-  &lt;samlp:SessionIndex&gt;{* session_index *}&lt;/samlp:SessionIndex&gt;
+&lt;samlp:LogoutRequest xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion" xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol" Version="2.0" ID="${id}" IssueInstant="${issue_instant}" Destination="${destination}"&gt;
+  &lt;saml:Issuer Format="urn:oasis:names:tc:SAML:2.0:nameid-format:entity"&gt;${issuer}&lt;/saml:Issuer&gt;
+  &lt;saml:NameID NameQualifier="${name_qualifier}" SPNameQualifier="${sp_name_qualifier}" Format="urn:oasis:names:tc:SAML:2.0:nameid-format:persistent"&gt;${name_id}&lt;/saml:NameID&gt;
+  &lt;samlp:SessionIndex&gt;${session_index}&lt;/samlp:SessionIndex&gt;
 &lt;/samlp:LogoutRequest&gt;
 ]]</span>
 
@@ -175,9 +175,15 @@
     ngx.exit(ngx.HTTP_BAD_REQUEST)
   <span class="keyword">end</span>
 
-  <span class="comment">-- TODO: lookup status
-</span>
+  <span class="keyword">local</span> status_code = saml.doc_status_code(doc)
+  <span class="keyword">if</span> status_code ~= saml.STATUS_SUCCESS <span class="keyword">then</span>
+    ngx.log(ngx.ERR, <span class="string">"IdP returned non-success status: "</span> .. status_code)
+    ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
+  <span class="keyword">end</span>
+
   <span class="keyword">local</span> attrs = saml.doc_attrs(doc)
+  ngx.shared.name_id = saml.doc_name_id(doc)
+  ngx.shared.session_index = saml.doc_session_index(doc)
   saml.doc_free(doc)
 
   ngx.header[<span class="string">"Set-Cookie"</span>] = <span class="string">"username="</span> .. attrs.username .. <span class="string">";"</span>
@@ -195,23 +201,41 @@
 <span class="keyword">function</span> _M.sls()
   <span class="keyword">local</span> doc, args, err = saml.binding.parse_post(<span class="string">"SAMLResponse"</span>, key_mngr_from_doc)
 
-  <span class="keyword">local</span> request_id = <span class="string">""</span>
-  <span class="keyword">if</span> doc <span class="keyword">then</span>
-    request_id = saml.doc_id(doc)
-    saml.doc_free(doc)
-  <span class="keyword">end</span>
-
-  <span class="keyword">local</span> status
-  <span class="keyword">if</span> err <span class="keyword">then</span>
+  <span class="keyword">if</span> <span class="keyword">not</span> doc <span class="keyword">then</span>
     ngx.log(ngx.WARN, err)
-    status = saml.STATUS_CODES_REQUESTER
-  <span class="keyword">else</span>
-    status = saml.STATUS_CODES_SUCCESS
+    ngx.exit(ngx.HTTP_BAD_REQUEST)
   <span class="keyword">end</span>
 
-  ngx.header[<span class="string">"Set-Cookie"</span>] = <span class="string">"username=; Max-Age=0"</span>
-  ngx.say(logout_response(request_id, saml.STATUS_CODES_SUCCESS))
-  ngx.exit(ngx.HTTP_OK)
+  <span class="keyword">local</span> name = saml.doc_root_name(doc)
+  <span class="keyword">if</span> <span class="keyword">not</span> name <span class="keyword">then</span>
+    ngx.log(ngx.WARN, <span class="string">"no name"</span>)
+    ngx.exit(ngx.HTTP_BAD_REQUEST)
+  <span class="keyword">end</span>
+
+  <span class="keyword">if</span> name == <span class="string">"LogoutRequest"</span> <span class="keyword">then</span>
+    <span class="keyword">local</span> request_id = <span class="string">""</span>
+    <span class="keyword">if</span> doc <span class="keyword">then</span>
+      request_id = saml.doc_id(doc)
+      saml.doc_free(doc)
+    <span class="keyword">end</span>
+
+    <span class="keyword">local</span> status
+    <span class="keyword">if</span> err <span class="keyword">then</span>
+      ngx.log(ngx.WARN, err)
+      status = saml.STATUS_CODES_REQUESTER
+    <span class="keyword">else</span>
+      status = saml.STATUS_CODES_SUCCESS
+    <span class="keyword">end</span>
+
+    ngx.header[<span class="string">"Set-Cookie"</span>] = <span class="string">"username=; Max-Age=0"</span>
+    ngx.say(logout_response(request_id, saml.STATUS_CODES_SUCCESS))
+    ngx.exit(ngx.HTTP_OK)
+  <span class="keyword">else</span>
+    ngx.status = ngx.HTTP_MOVED_TEMPORARILY
+    ngx.header.location = <span class="string">"/"</span>
+    ngx.header[<span class="string">"Set-Cookie"</span>] = <span class="string">"username=; Max-Age=0"</span>
+    ngx.exit(ngx.HTTP_OK)
+  <span class="keyword">end</span>
 <span class="keyword">end</span>
 
 <span class="keyword">function</span> _M.logout()
@@ -222,8 +246,8 @@
 
   <span class="keyword">local</span> query_str, err = saml.binding.create_redirect(SIGNING_KEY, {
     RelayState =  <span class="string">"/"</span>,
-    SAMLRequest = logout_request(name_id, session_index), <span class="comment">-- TODO store these on ngx.shared during acs
-</span>    SigAlg = RSA_SHA_512_HREF,
+    SAMLRequest = logout_request(ngx.shared.name_id, ngx.shared.session_index),
+    SigAlg = RSA_SHA_512_HREF,
   })
   <span class="keyword">if</span> err <span class="keyword">then</span>
     ngx.log(ngx.ERR, err)
@@ -231,9 +255,10 @@
   <span class="keyword">end</span>
 
   ngx.status = ngx.HTTP_MOVED_TEMPORARILY
+  ngx.header[<span class="string">"Set-Cookie"</span>] = <span class="string">"username=; Max-Age=0"</span>
   ngx.header.cache_control = <span class="string">"no-cache, no-store"</span>
   ngx.header.pragma = <span class="string">"no-cache"</span>
-  ngx.header.location = IDP_URI .. <span class="string">"/slo?"</span> .. query_str
+  ngx.header.location = IDP_URI .. <span class="string">"/sls?"</span> .. query_str
   ngx.exit(ngx.HTTP_OK)
 <span class="keyword">end</span>
 
@@ -244,7 +269,7 @@
 </div> <!-- id="main" -->
 <div id="about">
 <i>generated by <a href="http://github.com/stevedonovan/LDoc">LDoc 1.4.6</a></i>
-<i style="float:right;">Last updated 2019-07-09 19:48:40 </i>
+<i style="float:right;">Last updated 2019-07-22 14:16:17 </i>
 </div> <!-- id="about" -->
 </div> <!-- id="container" -->
 </body>
