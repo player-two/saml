@@ -87,7 +87,7 @@ xmlChar* saml_doc_session_index(xmlDoc* doc) {
   }
 
   if (xmlStrEqual(node->name, (xmlChar*)"LogoutRequest") == 1) {
-    node = xmlSecFindNode(node, (xmlChar*)"SessionIndex", xmlSecDSigNs);
+    node = xmlSecFindNode(node, (xmlChar*)"SessionIndex", (xmlChar*)SAML_XMLNS_PROTOCOL);
     if (node == NULL) {
       return NULL;
     }
