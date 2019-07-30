@@ -10,3 +10,7 @@ prepack:
 .PHONY: build
 build: prepack
 	make -C .build build
+
+.PHONY: test
+test: build
+	PYTHONPATH=`pwd`/.build/ python -m unittest discover -s t
