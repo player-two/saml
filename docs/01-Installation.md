@@ -2,15 +2,13 @@
 
 ## Dependencies
 
-At compile time:
+* [libxml2](http://www.xmlsoft.org/html/index.html)
+* [xmlsec1](https://www.aleksey.com/xmlsec/), plus a supported crypto library like openssl
+* [zlib](https://www.zlib.net/)
 
-* libxml2
-* xmlsec1, plus a supported crypto library
+At run time:
 
-At run time (for the binding module):
-
-* lua-nginx-module
-* zlib and lua-zlib
+* [lua-nginx-module](https://github.com/openresty/lua-nginx-module/) (optional, only required for `resty.saml`)
 
 The version of xmlsec1 that is packaged in the Centos repo is quite old, hence why the development container compiles it from source.
 

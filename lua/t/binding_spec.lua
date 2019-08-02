@@ -21,6 +21,9 @@ describe("binding", function()
     assert(saml.key_add_cert_file(key, "data/sp.crt", saml.KeyDataFormatCertPem))
     cert = assert(saml.key_read_file("data/sp.crt", saml.KeyDataFormatCertPem))
 
+    if not _G.ngx then
+      _G.ngx = { req = {} }
+    end
     stub(ngx.req, "get_method")
     stub(ngx.req, "get_post_args")
     stub(ngx.req, "get_uri_args")

@@ -131,7 +131,7 @@ saml_binding_status_t saml_binding_redirect_parse(char* content, char* sig_alg, 
     return SAML_INVALID_SIG_ALG;
   }
 
-  byte* decoded;
+  byte* decoded = NULL;
   int decoded_len;
   if (saml_base64_decode(content, strlen(content), &decoded, &decoded_len) < 0) {
     if (decoded != NULL) {
