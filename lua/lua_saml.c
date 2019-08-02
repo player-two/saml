@@ -779,7 +779,7 @@ int sign_get_opts(lua_State* L, int i, saml_doc_opts_t* opts) {
 Sign an XML document (mutates the input)
 @function sign_doc
 @tparam xmlSecKey* key
-@tparam string xmlSecTransformId transform_id
+@tparam xmlSecTransformId transform_id
 @tparam xmlDoc* doc
 @tparam[opt={}] table options
 @treturn ?string error
@@ -811,7 +811,7 @@ static int sign_doc(lua_State* L) {
 Sign an XML string
 @function sign_xml
 @tparam xmlSecKey* key
-@tparam string xmlSecTransformId transform_id
+@tparam xmlSecTransformId transform_id
 @tparam string str
 @tparam[opt={}] table options
 @treturn ?string signed xml
@@ -860,7 +860,7 @@ static int sign_xml(lua_State* L) {
 Verify a signature for a string
 @function verify_binary
 @tparam xmlSecKey* cert
-@tparam string xmlSecTransformId transform_id
+@tparam xmlSecTransformId transform_id
 @tparam string data
 @tparam string signature
 @treturn bool valid

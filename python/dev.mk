@@ -14,3 +14,7 @@ build: prepack
 .PHONY: test
 test: build
 	PYTHONPATH=`pwd`/.build/ python -m unittest discover -s t
+
+.PHONY: gdb
+gdb: build
+	gdb -ex "set environment PYTHONPATH=`pwd`/.build/" -ex 'run -m unittest discover -s t' python
