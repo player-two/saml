@@ -19,6 +19,7 @@ docs:
 .PHONY: test
 test:
 	$(MAKE) -C lua -f dev.mk test
+	$(MAKE) -C python -f dev.mk test
 
 .PHONY: release
 release:

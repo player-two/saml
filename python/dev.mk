@@ -1,5 +1,8 @@
 include ../src/Makefile
 
+DATA_DIR=$(shell pwd)/.build/data/
+TEST_DATA_DIR=$(shell pwd)/../test-data/
+
 .PHONY: prepack
 prepack:
 	rm -rf .build
@@ -13,7 +16,7 @@ build: prepack
 
 .PHONY: test
 test: build
-	PYTHONPATH=`pwd`/.build/ python -m unittest discover -s t
+	TEST_DATA_DIR=$(TEST_DATA_DIR) DATA_DIR=$(DATA_DIR) PYTHONPATH=`pwd`/.build/ python -m unittest discover -s t
 
 .PHONY: gdb
 gdb: build

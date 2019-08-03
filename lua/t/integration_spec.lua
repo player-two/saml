@@ -9,6 +9,8 @@ local function form_encode(params)
   return table.concat(result, "&")
 end
 
+local TEST_DATA_DIR = os.getenv("TEST_DATA_DIR")
+
 describe("saml integration", function()
   local key_text, cert_text, response
 
@@ -18,9 +20,9 @@ describe("saml integration", function()
     local err = saml.init({ data_dir=assert(os.getenv("DATA_DIR")) })
     if err then print(err) assert(nil) end
 
-    key_text = assert(utils.readfile("data/sp.key"))
-    cert_text = assert(utils.readfile("data/sp.crt"))
-    response = assert(utils.readfile("data/response.xml"))
+    key_text = assert(utils.readfile(TEST_DATA_DIR .. "sp.key"))
+    cert_text = assert(utils.readfile(TEST_DATA_DIR .. "sp.crt"))
+    response = assert(utils.readfile(TEST_DATA_DIR .. "response.xml"))
   end)
 
   describe("can verify a document signed", function()
@@ -58,7 +60,7 @@ describe("saml integration", function()
 
     it("via xmlsec1", function()
       local name = os.tmpname()
-      local success, result_type, result_code = os.execute("xmlsec1 --sign --id-attr:ID urn:oasis:names:tc:SAML:2.0:protocol:Response --enabled-reference-uris same-doc --privkey-pem data/sp.key,data/sp.crt --output " .. name .. " data/response-template.xml")
+      local success, result_type, result_code = os.execute(string.format("xmlsec1 --sign --id-attr:ID urn:oasis:names:tc:SAML:2.0:protocol:Response --enabled-reference-uris same-doc --privkey-pem %ssp.key,%ssp.crt --output %s %sresponse-template.xml", TEST_DATA_DIR, TEST_DATA_DIR, name, TEST_DATA_DIR))
       assert.is_true(success)
       assert.are.equal(result_type, "exit")
       assert.are.equal(result_code, 0)
@@ -108,7 +110,7 @@ describe("saml integration", function()
 
     it("via xmlsec1", function()
       local name = utils.write_tmpfile(signed)
-      local success, result_type, result_code = os.execute("xmlsec1 --verify --id-attr:ID urn:oasis:names:tc:SAML:2.0:protocol:Response --enabled-reference-uris same-doc --pubkey-cert-pem data/sp.crt " .. name .. " 2>/dev/null")
+      local success, result_type, result_code = os.execute(string.format("xmlsec1 --verify --id-attr:ID urn:oasis:names:tc:SAML:2.0:protocol:Response --enabled-reference-uris same-doc --pubkey-cert-pem %ssp.crt %s 2>/dev/null", TEST_DATA_DIR, name))
       assert.are.equal("exit", result_type)
       assert.are.equal(0, result_code)
       assert.is_true(success)
@@ -121,7 +123,7 @@ describe("saml integration", function()
 
     setup(function()
       local key = assert(saml.key_read_memory(key_text, saml.KeyDataFormatPem))
-      local authn_request = assert(utils.readfile("data/authn_request.xml"))
+      local authn_request = assert(utils.readfile(TEST_DATA_DIR .. "authn_request.xml"))
       local query_string = assert(saml.binding_redirect_create(key, "SAMLRequest", authn_request, "http://www.w3.org/2001/04/xmldsig-more#rsa-sha512", "/"))
       for k, v in query_string:gmatch("&?([^=]+)=([^&]*)") do args[k] = assert(saml.uri_decode(v)) end
     end)

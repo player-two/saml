@@ -1,5 +1,7 @@
 local utils = require "utils"
 
+local TEST_DATA_DIR = os.getenv("TEST_DATA_DIR")
+
 describe("sig", function()
   local saml
   local key, cert, transform_sha256, transform_sha512
@@ -14,9 +16,9 @@ describe("sig", function()
     local err = saml.init({ data_dir=assert(os.getenv("DATA_DIR")) })
     if err then print(err) assert(nil) end
 
-    key = assert(saml.key_read_file("data/sp.key", saml.KeyDataFormatPem))
-    assert(saml.key_add_cert_file(key, "data/sp.crt", saml.KeyDataFormatCertPem))
-    cert = assert(saml.key_read_file("data/sp.crt", saml.KeyDataFormatCertPem))
+    key = assert(saml.key_read_file(TEST_DATA_DIR .. "sp.key", saml.KeyDataFormatPem))
+    assert(saml.key_add_cert_file(key, TEST_DATA_DIR .. "sp.crt", saml.KeyDataFormatCertPem))
+    cert = assert(saml.key_read_file(TEST_DATA_DIR .. "sp.crt", saml.KeyDataFormatCertPem))
 
     transform_sha256 = assert(saml.find_transform_by_href(utils.xmlSecHrefRsaSha256))
     transform_sha512 = assert(saml.find_transform_by_href(utils.xmlSecHrefRsaSha512))
@@ -44,7 +46,7 @@ describe("sig", function()
     local input
 
     setup(function()
-      input = assert(utils.readfile("data/simple-input.xml"))
+      input = assert(utils.readfile(TEST_DATA_DIR .. "simple-input.xml"))
     end)
 
     it("errors for invalid document", function()
@@ -66,7 +68,7 @@ describe("sig", function()
     end)
 
     it("generates correct document using rsa-sha256", function()
-      local expected = assert(utils.readfile("data/simple-signed-rsa-sha256.xml"))
+      local expected = assert(utils.readfile(TEST_DATA_DIR .. "simple-signed-rsa-sha256.xml"))
       local result, err = saml.sign_xml(key, transform_sha256, input)
       assert.is_nil(err)
       assert.are.equal(expected, result)
@@ -107,14 +109,14 @@ describe("sig", function()
     end)
 
     it("rejects an incorrectly signed document", function()
-      local doc = assert(saml.doc_read_file("data/simple-bad-sig-rsa-sha256.xml"))
+      local doc = assert(saml.doc_read_file(TEST_DATA_DIR .. "simple-bad-sig-rsa-sha256.xml"))
       local valid, err = saml.verify_doc(mngr, doc)
       assert.is_nil(err)
       assert.is_false(valid)
     end)
 
     it("verifies a correctly signed document", function()
-      local doc = assert(saml.doc_read_file("data/simple-signed-rsa-sha256.xml"))
+      local doc = assert(saml.doc_read_file(TEST_DATA_DIR .. "simple-signed-rsa-sha256.xml"))
       local valid, err = saml.verify_doc(mngr, doc)
       assert.is_nil(err)
       assert.is_true(valid)

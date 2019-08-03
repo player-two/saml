@@ -1,3 +1,4 @@
+import os
 import unittest
 
 import saml
@@ -6,9 +7,9 @@ response = None
 
 
 def setUpModule():
-    saml.init("/home/jordan/dev/saml/data/")
+    saml.init(os.getenv('DATA_DIR'))
     global response
-    response = saml.doc_read_file("/home/jordan/dev/saml/lua/t/data/response.xml")
+    response = saml.doc_read_file(os.getenv('TEST_DATA_DIR') + 'response.xml')
 
 
 class TestSessionIndex(unittest.TestCase):

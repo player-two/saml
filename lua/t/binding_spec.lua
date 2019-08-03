@@ -1,5 +1,7 @@
 local utils = require "utils"
 
+local TEST_DATA_DIR = os.getenv("TEST_DATA_DIR")
+
 describe("binding", function()
   local binding, saml
   local key, cert, authn_request
@@ -12,14 +14,14 @@ describe("binding", function()
     binding = require "resty.saml.binding"
     saml    = require "saml"
 
-    authn_request = assert(utils.readfile("data/authn_request.xml"))
+    authn_request = assert(utils.readfile(TEST_DATA_DIR .. "authn_request.xml"))
 
     local err = saml.init({ data_dir=assert(os.getenv("DATA_DIR")) })
     if err then print(err) assert(nil) end
 
-    key = assert(saml.key_read_file("data/sp.key", saml.KeyDataFormatPem))
-    assert(saml.key_add_cert_file(key, "data/sp.crt", saml.KeyDataFormatCertPem))
-    cert = assert(saml.key_read_file("data/sp.crt", saml.KeyDataFormatCertPem))
+    key = assert(saml.key_read_file(TEST_DATA_DIR .. "sp.key", saml.KeyDataFormatPem))
+    assert(saml.key_add_cert_file(key, TEST_DATA_DIR .. "sp.crt", saml.KeyDataFormatCertPem))
+    cert = assert(saml.key_read_file(TEST_DATA_DIR .. "sp.crt", saml.KeyDataFormatCertPem))
 
     if not _G.ngx then
       _G.ngx = { req = {} }
@@ -182,7 +184,7 @@ describe("binding", function()
     local cb_error = function(doc) return nil end
 
     setup(function()
-      response = assert(utils.readfile("data/response-signed.xml.b64"))
+      response = assert(utils.readfile(TEST_DATA_DIR .. "response-signed.xml.b64"))
       mngr = saml.create_keys_manager({ cert })
     end)
 
