@@ -683,6 +683,57 @@ static PyObject* verify_doc(PyObject* self, PyObject* args, PyObject* kwargs) {
 }
 
 
+static PyObject* binding_redirect_create(PyObject* self, PyObject* args) {
+  PyObject* key_capsule;
+  char *saml_type, *content, *sig_alg, *relay_state;
+  if (!PyArg_ParseTupleAndKeywords(args, "Ossss", &key_capsule, &saml_type, &content, &sig_alg, &relay_state)) {
+    return NULL;
+  }
+
+  xmlSecKey* key = (xmlSecKey*)PyCapsule_GetPointer(key_capsule, CAPSULE_XML_SEC_KEY);
+  if (doc == NULL) {
+    PyErr_SetString(SamlError, "invalid key value");
+    return NULL;
+  }
+
+  str_t query;
+  saml_binding_status_t res = saml_binding_redirect_create(key, saml_type, content, sig_alg, relay_state, &query);
+  if (res != SAML_OK) {
+    PyErr_SetString(SamlError, saml_binding_error_msg(res));
+    return NULL;
+  } else {
+    PyObject* ret = Py_BuildValue("s#", query.data, query.len);
+    str_free(&query);
+    return ret;
+  }
+}
+
+
+static PyObject* binding_redirect_parse(PyObject* self, PyObject* args) {
+  PyObject *key_capsule, *params, *fn, *sig_alg, *sig, *relay_state;
+  char *saml_type, *content, *sig_alg, *relay_state;
+  if (!PyArg_ParseTuple(args, "OOO", &saml_type, &params, &fn)) {
+    return NULL;
+  }
+
+  xmlSecKey* key = (xmlSecKey*)PyCapsule_GetPointer(key_capsule, CAPSULE_XML_SEC_KEY);
+  if (doc == NULL) {
+    PyErr_SetString(SamlError, "invalid key value");
+    return NULL;
+  }
+
+  if (!PyMapping_Check(params)) {
+    PyErr_SetString(SamlError, "must be map");
+    return NULL;
+  }
+
+  content = PyMapping_GetItemString(params, saml_type);
+  sig_alg = PyMapping_GetItemString(params, "SigAlg");
+  signature = PyMapping_GetItemString(params, "Signature");
+  relay_state = PyMapping_GetItemString(params, "RelayState");
+}
+
+
 static PyMethodDef saml_funcs[] = {
   {"init", (PyCFunction)init, METH_VARARGS | METH_KEYWORDS, ""},
   {"shutdown", shutdown, METH_VARARGS, ""},
@@ -712,6 +763,11 @@ static PyMethodDef saml_funcs[] = {
   {"sign_xml", (PyCFunction)sign_xml, METH_VARARGS | METH_KEYWORDS, ""},
   {"verify_binary", verify_binary, METH_VARARGS, ""},
   {"verify_doc", (PyCFunction)verify_doc, METH_VARARGS | METH_KEYWORDS, ""},
+
+  {"binding_redirect_create", binding_redirect_create, METH_VARARGS, ""},
+  {"binding_redirect_parse", binding_redirect_parse, METH_VARARGS, ""},
+  {"binding_post_create", binding_post_create, METH_VARARGS, ""},
+  {"binding_post_parse", binding_post_parse, METH_VARARGS, ""},
 
   {NULL, NULL, 0, NULL}
 };
