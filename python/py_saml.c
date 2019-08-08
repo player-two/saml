@@ -686,12 +686,12 @@ static PyObject* verify_doc(PyObject* self, PyObject* args, PyObject* kwargs) {
 static PyObject* binding_redirect_create(PyObject* self, PyObject* args) {
   PyObject* key_capsule;
   char *saml_type, *content, *sig_alg, *relay_state;
-  if (!PyArg_ParseTupleAndKeywords(args, "Ossss", &key_capsule, &saml_type, &content, &sig_alg, &relay_state)) {
+  if (!PyArg_ParseTuple(args, "Ossss", &key_capsule, &saml_type, &content, &sig_alg, &relay_state)) {
     return NULL;
   }
 
   xmlSecKey* key = (xmlSecKey*)PyCapsule_GetPointer(key_capsule, CAPSULE_XML_SEC_KEY);
-  if (doc == NULL) {
+  if (key == NULL) {
     PyErr_SetString(SamlError, "invalid key value");
     return NULL;
   }
@@ -710,27 +710,51 @@ static PyObject* binding_redirect_create(PyObject* self, PyObject* args) {
 
 
 static PyObject* binding_redirect_parse(PyObject* self, PyObject* args) {
-  PyObject *key_capsule, *params, *fn, *sig_alg, *sig, *relay_state;
-  char *saml_type, *content, *sig_alg, *relay_state;
-  if (!PyArg_ParseTuple(args, "OOO", &saml_type, &params, &fn)) {
+  char* saml_type;
+  PyObject *params, *cert_from_doc;
+  if (!PyArg_ParseTuple(args, "sO!O", &saml_type, &PyDict_Type, &params, &cert_from_doc)) {
     return NULL;
   }
 
-  xmlSecKey* key = (xmlSecKey*)PyCapsule_GetPointer(key_capsule, CAPSULE_XML_SEC_KEY);
-  if (doc == NULL) {
+  if (!PyCallable_Check(cert_from_doc)) {
+    PyErr_SetString(PyExc_TypeError, "parameter must be callable");
+    return NULL;
+  }
+
+  char* content = (char*)PyUnicode_AsUTF8(PyMapping_GetItemString(params, saml_type));
+  char* sig_alg = (char*)PyUnicode_AsUTF8(PyMapping_GetItemString(params, "SigAlg"));
+  char* signature = (char*)PyUnicode_AsUTF8(PyMapping_GetItemString(params, "Signature"));
+  char* relay_state = (char*)PyUnicode_AsUTF8(PyMapping_GetItemString(params, "RelayState"));
+
+  xmlDoc* doc = NULL;
+  saml_binding_status_t res = saml_binding_redirect_parse(content, sig_alg, &doc);
+  if (res != SAML_OK) {
+    PyErr_SetString(SamlError, saml_binding_error_msg(res));
+    return NULL;
+  }
+
+  PyObject* doc_capsule = PyCapsule_New((void*)doc, CAPSULE_XML_DOC, &xmlDoc_destructor);
+  PyObject* cert_capsule = PyObject_CallFunction(cert_from_doc, "O", doc_capsule);
+
+  if (cert_capsule == Py_None) {
+    PyErr_SetString(SamlError, "no cert");
+    return doc_capsule;
+  } else if(!PyCapsule_CheckExact(cert_capsule)) {
+    PyErr_SetString(PyExc_TypeError, "callback must return None or xmlSecKey");
+    return doc_capsule;
+  }
+
+  xmlSecKey* cert = (xmlSecKey*)PyCapsule_GetPointer(cert_capsule, CAPSULE_XML_SEC_KEY);
+  if (cert == NULL) {
     PyErr_SetString(SamlError, "invalid key value");
-    return NULL;
+    return doc_capsule;
   }
 
-  if (!PyMapping_Check(params)) {
-    PyErr_SetString(SamlError, "must be map");
-    return NULL;
+  res = saml_binding_redirect_verify(cert, saml_type, content, sig_alg, relay_state, signature);
+  if (res != SAML_OK) {
+    PyErr_SetString(SamlError, saml_binding_error_msg(res));
   }
-
-  content = PyMapping_GetItemString(params, saml_type);
-  sig_alg = PyMapping_GetItemString(params, "SigAlg");
-  signature = PyMapping_GetItemString(params, "Signature");
-  relay_state = PyMapping_GetItemString(params, "RelayState");
+  return doc_capsule;
 }
 
 
@@ -766,8 +790,6 @@ static PyMethodDef saml_funcs[] = {
 
   {"binding_redirect_create", binding_redirect_create, METH_VARARGS, ""},
   {"binding_redirect_parse", binding_redirect_parse, METH_VARARGS, ""},
-  {"binding_post_create", binding_post_create, METH_VARARGS, ""},
-  {"binding_post_parse", binding_post_parse, METH_VARARGS, ""},
 
   {NULL, NULL, 0, NULL}
 };

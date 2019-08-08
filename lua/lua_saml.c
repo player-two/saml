@@ -990,7 +990,7 @@ static int binding_redirect_parse(lua_State* L) {
   lua_remove(L, 1);
 
   xmlDoc* doc = NULL;
-  int res = saml_binding_redirect_parse(content, sig_alg, &doc);
+  saml_binding_status_t res = saml_binding_redirect_parse(content, sig_alg, &doc);
   if (res != SAML_OK) {
     lua_pop(L, 1);
     if (doc != NULL) {
